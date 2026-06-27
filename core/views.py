@@ -389,7 +389,7 @@ def scan_qr(request, store_id=None):
     customer_id = request.session.get('customer_id', None)
 
     if customer_id:
-        try:    # now that his id exists in session, let's try getting his object from db
+        try:  # now that his id exists in session, let's try getting his object from db
             customer = Customer.objects.get(id=customer_id, store=store)
         except Customer.DoesNotExist:
             # Invalid session (the customer is not in our VIP system) --> clear session
@@ -400,13 +400,16 @@ def scan_qr(request, store_id=None):
         if request.method == 'POST':
             form = CustomerRegistrationForm(request.POST)
 
-            if form.is_valid():     # is_valid calls clean_phone and clean_size funcs in the forms module
+            if form.is_valid():  # is_valid calls clean_phone and clean_size funcs in the forms module
                 phone = form.cleaned_data['phone']
                 size = form.cleaned_data['size']
 
                 # Anti-Spam: Check fingerprint limits BEFORE creating customer
                 fingerprint = request.POST.get('fingerprint', '')
                 ip = request.META.get('REMOTE_ADDR', '')
+
+                # 🛡️ PSYCHOLOGICAL TRAP: Shadow ban flag
+                shadow_banned = False
 
                 # Rate limit by fingerprint (device)
                 if fingerprint:
@@ -417,14 +420,14 @@ def scan_qr(request, store_id=None):
 
                     # Max 3 registrations per device per day
                     if recent_fingerprint_count >= 3:
-                        messages.error(request, 'از این دستگاه بیش از حد مجاز ثبت‌نام انجام شده است.')
-                        return render(request, 'core/register.html', {
-                            'store': store,
-                            'form': form
-                        })
+                        # 🚫 SILENT BAN: Mark as shadow banned, NO error message
+                        shadow_banned = True
+
+                        # Also mark ALL existing customers with this fingerprint as shadow banned
+                        Customer.objects.filter(fingerprint=fingerprint).update(shadow_banned=True)
 
                     # Rate limit by IP address
-                    if ip:
+                    if ip and not shadow_banned:
                         recent_ip_count = Customer.objects.filter(
                             registration_ip=ip,
                             created_at__gte=timezone.now() - timezone.timedelta(hours=1)
@@ -432,11 +435,11 @@ def scan_qr(request, store_id=None):
 
                         # Max 4 registrations from same IP per hour
                         if recent_ip_count >= 4:
-                            messages.error(request, 'تعداد ثبت‌نام از این مکان بیش از حد مجاز است.')
-                            return render(request, 'core/register.html', {
-                                'store': store,
-                                'form': form
-                            })
+                            # 🚫 SILENT BAN: Mark as shadow banned, NO error message
+                            shadow_banned = True
+
+                            # Also mark ALL existing customers with this IP as shadow banned
+                            Customer.objects.filter(registration_ip=ip).update(shadow_banned=True)
 
                 # Create or Get customer
                 # why checking db again by 'get'?
@@ -447,8 +450,9 @@ def scan_qr(request, store_id=None):
                     store=store,
                     defaults={
                         'size': size,
-                        'fingerprint': fingerprint,     # Save the device fingerprint
-                        'registration_ip': ip           # Save the user's ip
+                        'fingerprint': fingerprint,  # Save the device fingerprint
+                        'registration_ip': ip,  # Save the user's ip
+                        'shadow_banned': shadow_banned,  # 🛡️ PSYCHOLOGICAL TRAP
                     }
                 )
 
@@ -457,6 +461,7 @@ def scan_qr(request, store_id=None):
                 if created:
                     customer.fingerprint = fingerprint
                     customer.registration_ip = ip
+                    customer.shadow_banned = shadow_banned
                     customer.save()
 
                 # if customer exists but size is different --> update it
@@ -488,6 +493,14 @@ def scan_qr(request, store_id=None):
         notification = customer.notification_message
         customer.notification_message = None  # Clear after reading
         customer.save()
+
+    # 🛡️ PSYCHOLOGICAL TRAP: Check if customer is shadow banned
+    if customer.shadow_banned:
+        # Show fake deals page (no discounts, no reveal)
+        return render(request, 'core/shadow_banned.html', {
+            'customer': customer,
+            'store': store,
+        })
 
     # customer already exists --> check cooldown
     if is_in_cooldown(customer):
@@ -538,7 +551,8 @@ def scan_qr(request, store_id=None):
         deals = existing_deals
     else:
         # Check 24h limit
-        if customer.last_deal_generated and (customer.last_deal_generated > timezone.now() - timezone.timedelta(hours=24)):
+        if customer.last_deal_generated and (
+                customer.last_deal_generated > timezone.now() - timezone.timedelta(hours=24)):
             # Customer got deals in the last 24 hours --> Show waiting page
             next_available = customer.last_deal_generated + timezone.timedelta(hours=24)
             return render(request,

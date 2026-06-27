@@ -73,6 +73,7 @@ class Customer(models.Model):
     fingerprint = models.CharField(max_length=255, null=True, blank=True,
                                    db_index=True)
     registration_ip = models.GenericIPAddressField(null=True, blank=True)
+    shadow_banned = models.BooleanField(default=False)
 
     def __str__(self):
         return f'{self.phone} - {self.store}'
