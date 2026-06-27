@@ -10,6 +10,7 @@ from .views import (
     scan_qr,
     reveal_discount,
     login_redirect,
+    generate_qr
 )
 
 urlpatterns = [
@@ -25,6 +26,7 @@ urlpatterns = [
     path('dashboard/deal/<int:deal_id>/confirm/', confirm_sold, name='confirm_sold'),
     path('dashboard/product/<int:product_id>/toggle/', toggle_out_of_stock, name='toggle_out_of_stock'),
     path('dashboard/products/', product_list, name='product_list'),
+    path('dashboard/qr/', generate_qr, name='generate_qr'),
 
     # Customer QR URLs
     path('scan/<int:store_id>/', scan_qr, name='scan_qr'),

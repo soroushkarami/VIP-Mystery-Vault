@@ -3,7 +3,7 @@ from .models import Store, Product, Customer, DailyDeal
 
 @admin.register(Store)
 class StoreAdmin(admin.ModelAdmin):
-    list_display = ('name', 'markup_percent', 'subscription_active')
+    list_display = ('id', 'name', 'markup_percent', 'subscription_active')
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):

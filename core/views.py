@@ -7,6 +7,7 @@ from django.core.files.base import ContentFile
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import HttpResponse
 
 from .models import Store, Product, Customer, DailyDeal
 from .forms import UploadInventoryForm, CustomerRegistrationForm
@@ -16,6 +17,8 @@ from .utils import get_top_deals, is_in_cooldown, update_visit_and_cooldown
 import os
 import pandas as pd
 import zipfile
+import qrcode
+from io import BytesIO
 
 
 class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in users(registered sellers) can access
@@ -282,6 +285,43 @@ def product_list(request):
                       'store': store,
                       'products': products
                   })
+
+
+def generate_qr(request):
+    """Generate a QR code for the seller's store"""
+    try:
+        store = request.user.store
+    except Store.DoesNotExist:
+        messages.error(request,
+                       'No store linked to your account.')
+        return redirect('dashboard_home')
+
+    # Build the URL for this store's scan page
+    url = request.build_absolute_uri(f'/scan/{store.id}/')
+
+    # TODO: create the QR code
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4
+    )
+    qr.add_data(url)
+    qr.make(fit=True)
+
+    # create image
+    img = qr.make_image(fill_color='black', back_color='white')
+
+    # save to bytes
+    buffer = BytesIO()      # Creates an in-memory file (not saved to disk)
+    img.save(buffer, format='PNG')
+    buffer.seek(0)      # Rewinds to the start of the buffer so it can be read.
+
+    # Return as downloadable file
+    response = HttpResponse(buffer, content_type='image/png')
+    response['Content-Disposition'] = f'attachment; filename="qr-code-{store.name}.png"'
+
+    return response
 
 
 # Customer Experience

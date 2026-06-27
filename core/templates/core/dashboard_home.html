@@ -37,6 +37,15 @@
     <div class="mt-4">
         <a href="{% url 'upload_inventory' %}" class="btn btn-success w-100">📤 Upload New Inventory</a>
     </div>
+
+    <div class="mt-3">
+    <a href="{% url 'generate_qr' %}" class="btn btn-primary w-100">
+        📱 Download QR Code
+    </a>
+    <small class="text-muted d-block text-center mt-1">
+        Print this and place it on your counter for customers to scan.
+    </small>
+    </div>
 </div>
 </body>
 </html>
