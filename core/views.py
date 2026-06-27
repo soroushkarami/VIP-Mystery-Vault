@@ -1,0 +1,420 @@
+from django.http import JsonResponse
+from django.shortcuts import redirect, render, get_object_or_404
+from django.urls import reverse_lazy
+from django.views.generic import FormView
+from django.contrib import messages
+from django.core.files.base import ContentFile
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+
+from .models import Store, Product, Customer, DailyDeal
+from .forms import UploadInventoryForm, CustomerRegistrationForm
+from .normalizer import normalize_columns, persian_to_english_numbers, normalize_size
+from .utils import get_top_deals, is_in_cooldown, update_visit_and_cooldown
+
+import os
+import pandas as pd
+import zipfile
+
+
+class UploadInventoryView(FormView):
+    template_name = 'core/upload_inventory.html'
+    form_class = UploadInventoryForm
+    success_url = reverse_lazy('admin:index')   # if upload is successful, send seller to the Admin panel
+
+    def form_valid(self, form):
+        """
+        runs automatically when Django determines the form is 100% valid (file types are correct, no viruses, etc.)
+        """
+        store = form.cleaned_data['store']      # cleaned_data: tool in FormView that checks if the file is a valid file
+        excel_file = form.cleaned_data['excel_file']
+        zip_file = form.cleaned_data['zip_images']
+
+        #TODO 1. PROCESS EXCEL
+        try:
+            df = pd.read_excel(excel_file)
+        except Exception as e:
+            messages.error(self.request,
+                           f"Failed to read Excel: {str(e)}")
+            return super().form_invalid(form)   # re-renders the page with the error message
+
+        # Normalize Persian column names to English
+        df = normalize_columns(df)
+
+        products_created = 0
+        errors = []
+
+        # check columns: SKU, Name, Price, Size, Category, Stock
+        for idx, row in df.iterrows():
+            # SKU col
+            sku = str(row.get('Sku', '')).strip()
+            if not sku:
+                continue
+
+            # NAME col
+            name = row.get('Name', '-')
+
+            # CATEGORY col
+            category = row.get('Category', 'General')
+
+            # PRICE col
+            # Convert Persian numbers to English
+            price_str = persian_to_english_numbers(row.get('Price', '0'))
+            try:
+                price = int(price_str) if price_str else 0
+            except ValueError:
+                errors.append(f"Invalid price for SKU '{sku}': '{price_str}'")
+                price = 0
+
+            # STOCK col
+            # Convert Persian numbers to English
+            stock_str = persian_to_english_numbers(row.get('Stock', '0'))
+            try:
+                stock = int(stock_str) if stock_str else 0
+            except ValueError:
+                errors.append(f"Invalid stock for SKU '{sku}': '{stock_str}'")
+                stock = 0
+
+            # SIZE col
+            # Normalize Persian sizes
+            size = normalize_size(row.get('Size', 'M'))
+
+            # Update or create the product
+            products, created = Product.objects.update_or_create(
+                store =store,
+                sku=sku,
+                defaults={
+                    'name':name,
+                    'price':price,
+                    'size':size,
+                    'category':category,
+                    'stock':stock,
+                    'is_out_of_stock':False,
+                }
+            )
+            products_created += 1 if created else 0
+
+        #TODO 2. PROCESS ZIP (if provided)
+        if zip_file:
+            try:
+                with zipfile.ZipFile(zip_file, 'r') as zf:
+                    for name in zf.namelist():
+                        # Get the file extension (e.g., .jpg, .png)
+                        base, ext = os.path.splitext(name)
+                        sku_from_file = base.strip()
+                        if not sku_from_file:
+                            continue
+
+                        # Find the product with this SKU
+                        try:
+                            # search for the product with that SKU in the store
+                            product = Product.objects.get(store=store,
+                                                          sku=sku_from_file)
+
+                            # Read the file content and save it to the product's image field
+                            content = zf.read(name)     # reads the raw bytes of the image
+                            product.image.save(f"{sku_from_file}{ext}",
+                                               ContentFile(content),
+                                               save=True)   # saves the file to media/products/
+                        except Product.DoesNotExist:
+                            errors.append(f"SKU '{sku_from_file}' not found for image '{name}'")
+
+            except Exception as e:
+                errors.append(f"ZIP processing error: {str(e)}")
+
+        # TODO 3. SHOW RESULTS
+        if errors:
+            messages.warning(self.request,
+                             f"Processed {products_created} products, but had issues: {', '.join(errors[:5])}")
+        else:
+            messages.success(self.request,
+                             f"Success! {products_created} products added/updated.")
+
+        # calls the parent (FormView) which does the redirect to success_url (admin:index)
+        return super().form_valid(form)
+
+
+@login_required
+def dashboard_home(request):
+    try:
+        store = request.user.store      # user.store → Returns the Store object linked to this user
+    except Store.DoesNotExist:
+        return render(request,
+        'core/dashboard_home.html',
+                {
+            'error': 'No store linked to your account. Please contact support.',
+            'store': None
+        })
+
+    # Count pending deals
+    pending_deals = DailyDeal.objects.filter(
+        customer__store=store,      # Only this store's customers
+        is_claimed=False,
+        expires_at__gt=timezone.now()   # gt: greater than ie deals that are not expired yet
+    ).count()
+
+    return render(request,
+                  'core/dashboard_home.html',
+                  {
+                      'store': store,
+                      'pending_deals': pending_deals
+                  })
+
+
+# ---------- PENDING DEALS LIST ----------
+@login_required
+def pending_deals(request):
+    try:
+        store = request.user.store
+    except Store.DoesNotExist:
+        return redirect('dashboard_home')
+
+    deals = DailyDeal.objects.filter(
+        customer__store=store,
+        is_claimed=False,
+        expires_at__gt=timezone.now()
+    ).select_related('customer', 'product').order_by('-created_at')
+    # Returns QuerySet of Deal objects
+    # Passes the list of deals to the template
+
+    return render(request,
+                  'core/pending_deals.html',
+                  {
+                      'store': store,
+                      'deals': deals
+                  })
+
+
+# ---------- CONFIRM SOLD ----------
+@login_required
+def confirm_sold(request, deal_id):
+    if request.method != 'POST':
+        return redirect('pending_deals')
+
+    deal = get_object_or_404(DailyDeal,
+                             id=deal_id,
+                             is_claimed=False)
+
+    # safety check – ensure the deal belongs to this user's store
+    if deal.customer.store != request.user.store:
+        messages.error(request,
+                       "You don't have permission to confirm this deal.")
+        return redirect('pending_deals')
+
+    # TODO 1. Subtract stock
+    product = deal.product
+    if product.stock > 0:
+        product.stock -= 1
+        if product.stock == 0:
+            product.is_out_of_stock = True
+        product.save()
+
+    # TODO 2. Mark deal as claimed
+    deal.is_claimed = True      # seller sold
+    deal.is_bought = True       # customer bought
+    deal.save()
+
+    # TODO 3. Update customer style_tags
+    customer = deal.customer
+    customer.add_purchase(product)
+
+    # Reset visit count after purchase
+    update_visit_and_cooldown(customer, made_purchase=True)
+
+    messages.success(request,
+                     f'✅ Deal confirmed! {product.name} sold to {customer.phone}.')
+    return redirect('pending_deals')
+
+
+# ---------- TOGGLE OUT OF STOCK ----------
+@login_required
+def toggle_out_of_stock(request, product_id):
+    if request.method != 'POST':
+        return redirect('pending_deals')
+
+    product = get_object_or_404(Product,
+                                id=product_id)
+
+    # Ensure this product belongs to the user's store
+    if product.store != request.user.store:
+        messages.error(request,
+                       "You don't have permission to modify this product.")
+        return redirect('pending_deals')
+
+    product.is_out_of_stock = not product.is_out_of_stock
+    # FLIP switch: If the product is currently "In Stock", it becomes "Out of Stock". If it is "Out of Stock", it becomes "In Stock".
+    product.save()
+
+    status = 'Out of Stock' if product.is_out_of_stock else 'In Stock'
+    messages.success(request,
+                     f'{product.name} is now {status}')
+    return redirect('pending_deals')
+
+
+# ---------- PRODUCT LIST (for Out of Stock toggle) ----------
+@login_required
+def product_list(request):
+    try:
+        store = request.user.store
+    except Store.DoesNotExist:
+        return redirect('dashboard_home')
+
+    products = Product.objects.filter(store=store).order_by('name')
+
+    return render(request,
+                  'core/product_list.html',
+                  {
+                      'store': store,
+                      'products': products
+                  })
+
+
+# Customer Experience
+# ---------- QR SCAN ----------
+def scan_qr(request, store_id=None):
+    """
+    Customer scans QR code → This view handles the request.
+    - New customer: Show registration form (phone + size).
+    - Returning customer: Show their 3 deals.
+    """
+    try:
+        store = Store.objects.get(id=store_id)
+    except Store.DoesNotExist:
+        return render(request,
+                      'core/error.html',
+                      {'error': 'Store not found.'})
+
+    # check if customer is identified by his/her browser's session (cookie)
+    customer = None
+    customer_id = request.session.get('customer_id', None)
+
+    if customer_id:
+        try:    # now that his id exists in session, let's try getting his object from db
+            customer = Customer.objects.get(id=customer_id, store=store)
+        except Customer.DoesNotExist:
+            # Invalid session (the customer is not in our VIP system) --> clear session
+            request.session.pop('customer_id', None)
+
+    # If no customer in session, new customer --> show registration
+    if not customer:
+        if request.method == 'POST':
+            form = CustomerRegistrationForm(request.POST)
+
+            if form.is_valid():     # is_valid calls clean_phone and clean_size funcs in the forms module
+                phone = form.cleaned_data['phone']
+                size = form.cleaned_data['size']
+
+                # Create or Get customer
+                # why checking db again by 'get'?
+                # she might have visited before but cleared her browser cookies. By using her phone number,
+                # we can recover her old account + show her deals based on her previous purchases!
+                customer, created = Customer.objects.get_or_create(
+                    phone=phone,
+                    store=store,
+                    defaults={
+                        'size': size
+                    }
+                )
+
+                # if customer exists but size is different --> update it
+                if not created and customer.size != size:
+                    customer.size = size
+                    customer.save()
+
+                # save customer id in session (so they're identified on their next visit)
+                request.session['customer_id'] = customer.id
+
+                # redirect to show the deals
+                return redirect('scan_qr',
+                                store_id=store_id)
+
+        # GET request: show registration form
+        else:
+            form = CustomerRegistrationForm()
+
+        return render(request,
+                      'core/register.html',
+                      {
+                          'store': store,
+                          'form': form
+                      })
+
+    # customer already exists --> check cooldown
+    if is_in_cooldown(customer):
+        return render(request,
+                      'core/cooldown.html',
+                      {
+                          'customer': customer,
+                          'cooldown_until': customer.cooldown_until
+                      })
+
+    # update visit count
+    cooldown_triggered = update_visit_and_cooldown(customer, made_purchase=False)
+    if cooldown_triggered:
+        return render(request,
+                      'core/cooldown.html',
+                      {
+                          'customer': customer,
+                          'cooldown_until': customer.cooldown_until,
+                          'message': 'You have visited 3 times without purchasing. Take a week off, then come back for a special deal.!'
+                      })
+
+    # TODO: Generate deals
+    deals = get_top_deals(customer, store, top_k=3)
+    if not deals:
+        return render(request,
+                      'core/no_deals.html',
+                      {
+                          'customer': customer,
+                          'store': store
+                      })
+
+    return render(request,
+                  'core/deals.html',
+                  {
+                      'customer': customer,
+                      'store': store,
+                      'deals': deals,
+                  })
+
+
+# ---------- REVEAL DISCOUNT (AJAX) ----------
+def reveal_discount(request, deal_id):
+    """
+    Customer taps a card → Reveal the discount via AJAX.
+    Returns JSON with discount percentage.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'invalid request'},
+                            status=400)
+
+    # check if customer is in session
+    customer_id = request.session.get('customer_id')
+    if not customer_id:
+        return JsonResponse({'error': 'Please scan the QR code again.'},
+                            status=401)
+
+    # The Database Lookup (Is this deal real?)
+    try:
+        deal = DailyDeal.objects.get(id=deal_id,
+                                     customer_id=customer_id,
+                                     is_claimed=False)
+    except DailyDeal.DoesNotExist:
+        return JsonResponse({'error': 'Deal not found or already claimed'},
+                            status=404)
+
+    # check if deal is expired
+    if deal.is_expired():
+        return JsonResponse({'error': 'Sorry, this deal is expired.'},
+                            status=410)
+
+    # return the discount
+    discounted_price = deal.product.price * (100 - deal.discount_percent) / 100
+    return JsonResponse({
+        'discount_percent': deal.discount_percent,
+        'product_name': deal.product.name,
+        'product_price': str(deal.product.price),
+        'discounted_price': str(int(discounted_price))
+    })
+    # This JSON package flies back to customer's phone.
+    # The JavaScript catches it and updates the HTML to show "25% OFF!"

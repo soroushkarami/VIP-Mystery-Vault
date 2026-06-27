@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>تخفیف‌های شما – Mystery Deal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        .deal-card {
+            cursor: pointer;
+            transition: transform 0.3s;
+            min-height: 200px;
+        }
+        .deal-card:hover { transform: scale(1.02); }
+        .deal-card .card-body { display: flex; flex-direction: column; justify-content: center; }
+        .deal-reveal { display: none; }
+        .deal-reveal.show { display: block; }
+        .price { font-size: 1.2rem; font-weight: bold; color: #28a745; }
+        .discount-badge { font-size: 2rem; font-weight: bold; }
+    </style>
+</head>
+<body>
+<div class="container mt-4">
+    <h2 class="text-center mb-4">🎁 ۳ تخفیف ویژه برای شما</h2>
+    <p class="text-center text-muted">{{ customer.phone }}</p>
+
+    <div class="row g-3">
+        {% for deal in deals %}
+            <div class="col-12 col-md-4">
+                <div class="card deal-card shadow" data-deal-id="{{ deal.id }}">
+                    <div class="card-body text-center">
+                        {% if deal.product.has_image %}
+                            <img src="{{ deal.product.image.url }}" class="img-fluid rounded" style="max-height: 150px; width: auto; margin: 0 auto;">
+                        {% else %}
+                            <div class="display-1">🎁</div>
+                        {% endif %}
+                        <h5 class="mt-3">{{ deal.product.name }}</h5>
+                        <p class="text-muted">{{ deal.product.size }}</p>
+                        <p class="price">{{ deal.product.price }} تومان</p>
+
+                        <div class="deal-reveal" id="reveal-{{ deal.id }}">
+                            <div class="alert alert-success">
+                                <span class="discount-badge">{{ deal.discount_percent }}%</span>
+                                <p class="mb-0">تخفیف ویژه!</p>
+                                <p class="mb-0">قیمت با تخفیف: <strong id="discounted-{{ deal.id }}"></strong> تومان</p>
+                            </div>
+                            <small class="text-muted">این تخفیف تا {{ deal.expires_at|date:"H:i" }} معتبر است.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="text-center mt-4">
+        <p class="text-muted">هر کدام را انتخاب کنید و در فروشگاه به فروشنده نشان دهید.</p>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.deal-card');
+
+    cards.forEach(card => {
+        card.addEventListener('click', function() {
+            const dealId = this.dataset.dealId;
+            const revealDiv = document.getElementById('reveal-' + dealId);
+
+            // If already revealed, do nothing
+            if (revealDiv.classList.contains('show')) {
+                return;
+            }
+
+            // Show loading state
+            this.style.opacity = '0.7';
+
+            // Fetch discount
+            fetch('{% url "reveal_discount" 0 %}'.replace('0', dealId), {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                // Update the price
+                document.getElementById('discounted-' + dealId).textContent = data.discounted_price;
+
+                // Reveal the discount
+                revealDiv.classList.add('show');
+                this.style.opacity = '1';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('خطا در دریافت تخفیف. لطفاً دوباره تلاش کنید.');
+                this.style.opacity = '1';
+            });
+        });
+    });
+});
+</script>
+</body>
+</html>

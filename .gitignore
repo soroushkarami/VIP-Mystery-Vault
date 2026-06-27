@@ -1,0 +1,44 @@
+# Python
+*.pyc
+__pycache__/
+*.py[cod]
+*.so
+.Python
+venv/
+.venv/
+env/
+.env
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+/staticfiles/
+/media/
+/static/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# Documents
+*.docx
+*.doc
+*.txt
+*.xlsx
+*.zip
+
+# Temporary files
+~$*
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.dbmedia/
+static/
+staticfiles/
+.idea/
+*.iml
