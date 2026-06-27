@@ -27,6 +27,14 @@
 </head>
 <body>
 <div class="container mt-4">
+
+    {% if notification %}
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        {{ notification }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
     <h2 class="text-center mb-4">🎁 ۳ تخفیف ویژه برای شما</h2>
     <p class="text-center text-muted">{{ customer.phone }}</p>
 

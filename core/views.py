@@ -263,9 +263,53 @@ def toggle_out_of_stock(request, product_id):
     # FLIP switch: If the product is currently "In Stock", it becomes "Out of Stock". If it is "Out of Stock", it becomes "In Stock".
     product.save()
 
+    # TODO: If product is marked OUT OF STOCK, replace pending deals
+    if product.is_out_of_stock:
+        # Find all pending deals for this product
+        pending_deals = DailyDeal.objects.filter(
+            product=product,
+            is_claimed=False,
+            expires_at__gt=timezone.now()
+        )
+
+        for deal in pending_deals:
+            customer = deal.customer
+            store = product.store
+
+            # mark the old deal as claimed so that it removes from dashboard
+            deal.is_claimed = True
+            deal.save()
+
+            # Find a replacement product (same size, not out of stock)
+            replacement = Product.objects.filter(
+                store=store,
+                size=product.size,
+                stock__gt=0,
+                is_out_of_stock=False
+            ).exclude(id=product.id).first()
+
+            if replacement:
+                # create a new deal with the same discount
+                new_deal = DailyDeal.create_deal(
+                    customer=customer,
+                    product=replacement,
+                    discount=deal.discount_percent,
+                    hours=2
+                )
+                # Set notification message for the customer
+                customer.notification_message = f"🔄 Your deal for {product.name} has been replaced with {replacement.name} at the same discount!"
+                customer.save()
+                messages.info(request,
+                              f"🔄 Replaced deal for {customer.phone}: {product.name} → {replacement.name}")
+            else:
+                # No replacement found → notify seller
+                messages.warning(request,
+                                 f"No replacement product found for {product.name}. Customer {customer.phone} will not get a new deal.")
+
     status = 'Out of Stock' if product.is_out_of_stock else 'In Stock'
     messages.success(request,
                      f'{product.name} is now {status}')
+
     return redirect('pending_deals')
 
 
@@ -395,6 +439,13 @@ def scan_qr(request, store_id=None):
                           'form': form
                       })
 
+    # Check if customer has a notification message (from replacement deal, etc.)
+    notification = None
+    if customer.notification_message:
+        notification = customer.notification_message
+        customer.notification_message = None  # Clear after reading
+        customer.save()
+
     # customer already exists --> check cooldown
     if is_in_cooldown(customer):
         return render(request,
@@ -453,13 +504,13 @@ def scan_qr(request, store_id=None):
         customer.last_deal_generated = timezone.now()
         customer.save()
 
-    # Show deals
     return render(request,
                   'core/deals.html',
                   {
                       'customer': customer,
                       'store': store,
                       'deals': deals,
+                      'notification': notification
                   })
 
 
