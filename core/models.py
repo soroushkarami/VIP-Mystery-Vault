@@ -69,6 +69,10 @@ class Customer(models.Model):
     cooldown_until = models.DateTimeField(null=True, blank=True)
     notification_message = models.TextField(blank=True, null=True)
     special_offer_used = models.BooleanField(default=False)
+    # fingerprint + IP for phone verification
+    fingerprint = models.CharField(max_length=255, null=True, blank=True,
+                                   db_index=True)
+    registration_ip = models.GenericIPAddressField(null=True, blank=True)
 
     def __str__(self):
         return f'{self.phone} - {self.store}'

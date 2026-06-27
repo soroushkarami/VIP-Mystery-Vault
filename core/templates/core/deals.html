@@ -23,6 +23,13 @@
         .deal-card.locked:hover {
             transform: none;
         }
+        .expiry-timer {
+            font-weight: bold;
+            color: #dc3545;
+        }
+        .expiry-timer.expired {
+            color: #6c757d;
+        }
     </style>
 </head>
 <body>
@@ -58,7 +65,11 @@
                                 <p class="mb-0">تخفیف ویژه!</p>
                                 <p class="mb-0">قیمت با تخفیف: <strong id="discounted-{{ deal.id }}"></strong> تومان</p>
                             </div>
-                            <small class="text-muted">این تخفیف تا {{ deal.expires_at|date:"H:i" }} معتبر است.</small>
+                            <small class="text-muted">
+                                <span class="expiry-timer" data-expiry="{{ deal.expires_at|date:'c' }}">
+                                    <!-- Countdown will be inserted here -->
+                                </span>
+                            </small>
                         </div>
                     </div>
                 </div>
@@ -73,23 +84,55 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // ==== Countdown Timer ====
+    const timers = document.querySelectorAll('.expiry-timer');
+
+    function updateTimers() {
+        const now = new Date().getTime();
+
+        timers.forEach(function(el) {
+            const expiry = new Date(el.dataset.expiry).getTime();
+            const distance = expiry - now;
+
+            if (distance < 0) {
+                el.textContent = 'منقضی شده';
+                el.classList.add('expired');
+                return;
+            }
+
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+
+            // Format nicely in Persian
+            let parts = [];
+            if (hours > 0) parts.push(hours + ' ساعت');
+            if (minutes > 0) parts.push(minutes + ' دقیقه');
+            if (parts.length === 0) parts.push('کمتر از یک دقیقه');
+
+            el.textContent = parts.join(' و ');
+            el.classList.remove('expired');
+        });
+    }
+
+    // Update immediately and then every minute
+    updateTimers();
+    setInterval(updateTimers, 60000);
+
+    // ==== Card click / Reveal ====
     const cards = document.querySelectorAll('.deal-card');
-    let hasRevealed = false;  // ✅ Track if ANY deal has been revealed
+    let hasRevealed = false;
 
     cards.forEach(card => {
         card.addEventListener('click', function() {
             const dealId = this.dataset.dealId;
             const revealDiv = document.getElementById('reveal-' + dealId);
 
-            // ✅ If already revealed OR if another deal was revealed, do nothing
             if (revealDiv.classList.contains('show') || hasRevealed) {
                 return;
             }
 
-            // Show loading state
             this.style.opacity = '0.7';
 
-            // Fetch discount
             fetch('{% url "reveal_discount" 0 %}'.replace('0', dealId), {
                 method: 'POST',
                 headers: {
@@ -104,14 +147,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
 
-                // Update the price
                 document.getElementById('discounted-' + dealId).textContent = data.discounted_price;
-
-                // Reveal the discount
                 revealDiv.classList.add('show');
                 this.style.opacity = '1';
 
-                // ✅ Lock all other cards (one tap only!)
                 hasRevealed = true;
                 cards.forEach(c => {
                     if (c !== this) {

@@ -41,16 +41,35 @@ class CustomerRegistrationForm(forms.Form):
 
     def clean_phone(self):
         phone = self.cleaned_data['phone']
-
-        # Step 1: Convert Persian digits to English
         phone = persian_to_english_numbers(phone)
-
-        # Step 2: Remove all non-digit characters
         phone = ''.join([ch for ch in phone if ch.isdigit()])
 
-        # Step 3: Validate length
-        if len(phone) < 10:
-            raise forms.ValidationError('شماره موبایل معتبر نیست.')
+        # TODO 1: length check
+        if len(phone) != 11:
+            raise forms.ValidationError('شماره موبایل باید ۱۱ رقم باشد.')
+
+        # TODO 2: checkif it starts with 09
+        if not phone.startswith('09'):
+            raise forms.ValidationError('شماره موبایل باید با ۰۹ شروع شود.')
+
+        # TODO 3: check Iranian mobile prefixes
+        valid_prefixes = [
+            # hamrahe avval
+            '0910', '0911', '0912', '0913', '0914', '0915', '0916',
+            '0917', '0918', '0919', '0990', '0991', '0992', '0993',
+            '0994', '0996',
+            # irancell
+            '0900', '0901', '0902', '0903', '0904', '0905', '0930',
+            '0933', '0935', '0936', '0937', '0938', '0939', '0941',
+            # rightel                                             
+            '0920', '0921', '0922', '0923',
+            # uptel
+            '0999',
+        ]
+
+        prefix = phone[:4]
+        if prefix not in valid_prefixes:
+            raise forms.ValidationError('شماره موبایل معتبر نیست (پیش‌شماره اشتباه).')
 
         return phone
 

@@ -404,6 +404,40 @@ def scan_qr(request, store_id=None):
                 phone = form.cleaned_data['phone']
                 size = form.cleaned_data['size']
 
+                # Anti-Spam: Check fingerprint limits BEFORE creating customer
+                fingerprint = request.POST.get('fingerprint', '')
+                ip = request.META.get('REMOTE_ADDR', '')
+
+                # Rate limit by fingerprint (device)
+                if fingerprint:
+                    recent_fingerprint_count = Customer.objects.filter(
+                        fingerprint=fingerprint,
+                        created_at__gte=timezone.now() - timezone.timedelta(days=1)
+                    ).count()
+
+                    # Max 3 registrations per device per day
+                    if recent_fingerprint_count >= 3:
+                        messages.error(request, 'از این دستگاه بیش از حد مجاز ثبت‌نام انجام شده است.')
+                        return render(request, 'core/register.html', {
+                            'store': store,
+                            'form': form
+                        })
+
+                    # Rate limit by IP address
+                    if ip:
+                        recent_ip_count = Customer.objects.filter(
+                            registration_ip=ip,
+                            created_at__gte=timezone.now() - timezone.timedelta(hours=1)
+                        ).count()
+
+                        # Max 4 registrations from same IP per hour
+                        if recent_ip_count >= 4:
+                            messages.error(request, 'تعداد ثبت‌نام از این مکان بیش از حد مجاز است.')
+                            return render(request, 'core/register.html', {
+                                'store': store,
+                                'form': form
+                            })
+
                 # Create or Get customer
                 # why checking db again by 'get'?
                 # she might have visited before but cleared her browser cookies. By using her phone number,
@@ -412,9 +446,18 @@ def scan_qr(request, store_id=None):
                     phone=phone,
                     store=store,
                     defaults={
-                        'size': size
+                        'size': size,
+                        'fingerprint': fingerprint,     # Save the device fingerprint
+                        'registration_ip': ip           # Save the user's ip
                     }
                 )
+
+                # If the customer already exists, we SHOULDN'T overwrite their fingerprint/IP.
+                # Only update if it's a newly created customer (or if they somehow don't have one).
+                if created:
+                    customer.fingerprint = fingerprint
+                    customer.registration_ip = ip
+                    customer.save()
 
                 # if customer exists but size is different --> update it
                 if not created and customer.size != size:
