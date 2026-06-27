@@ -65,6 +65,7 @@ class Customer(models.Model):
     style_tags = models.JSONField(default=dict)
     visit_count = models.PositiveIntegerField(default=0)
     last_visit = models.DateTimeField(null=True, blank=True)
+    last_deal_generated = models.DateTimeField(null=True, blank=True)
     cooldown_until = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):

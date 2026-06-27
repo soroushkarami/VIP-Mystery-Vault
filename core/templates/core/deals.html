@@ -16,6 +16,13 @@
         .deal-reveal.show { display: block; }
         .price { font-size: 1.2rem; font-weight: bold; color: #28a745; }
         .discount-badge { font-size: 2rem; font-weight: bold; }
+        .deal-card.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .deal-card.locked:hover {
+            transform: none;
+        }
     </style>
 </head>
 <body>
@@ -59,14 +66,15 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const cards = document.querySelectorAll('.deal-card');
+    let hasRevealed = false;  // ✅ Track if ANY deal has been revealed
 
     cards.forEach(card => {
         card.addEventListener('click', function() {
             const dealId = this.dataset.dealId;
             const revealDiv = document.getElementById('reveal-' + dealId);
 
-            // If already revealed, do nothing
-            if (revealDiv.classList.contains('show')) {
+            // ✅ If already revealed OR if another deal was revealed, do nothing
+            if (revealDiv.classList.contains('show') || hasRevealed) {
                 return;
             }
 
@@ -84,6 +92,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.error) {
                     alert(data.error);
+                    this.style.opacity = '1';
                     return;
                 }
 
@@ -93,6 +102,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Reveal the discount
                 revealDiv.classList.add('show');
                 this.style.opacity = '1';
+
+                // ✅ Lock all other cards (one tap only!)
+                hasRevealed = true;
+                cards.forEach(c => {
+                    if (c !== this) {
+                        c.classList.add('locked');
+                    }
+                });
             })
             .catch(error => {
                 console.error('Error:', error);

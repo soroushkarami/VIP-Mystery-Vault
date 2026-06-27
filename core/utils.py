@@ -117,7 +117,7 @@ def update_visit_and_cooldown(customer, made_purchase=False):
     # TODO: Trigger cooldown if 3 visits in 7 days without purchase
     seven_days_ago = timezone.now() - timezone.timedelta(days=7)
 
-    if customer.visit_count >= 3 and customer.last_visit >= seven_days_ago:
+    if customer.visit_count >= 4 and customer.last_visit >= seven_days_ago:
         customer.cooldown_until = timezone.now() + timezone.timedelta(days=7)
         customer.visit_count = 0
         customer.save()

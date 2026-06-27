@@ -287,6 +287,7 @@ def product_list(request):
                   })
 
 
+@login_required
 def generate_qr(request):
     """Generate a QR code for the seller's store"""
     try:
@@ -301,9 +302,9 @@ def generate_qr(request):
 
     # TODO: create the QR code
     qr = qrcode.QRCode(
-        version=1,
+        version=5,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=10,
+        box_size=30,
         border=4
     )
     qr.add_data(url)
@@ -414,16 +415,45 @@ def scan_qr(request, store_id=None):
                           'message': 'You have visited 3 times without purchasing. Take a week off, then come back for a special deal.!'
                       })
 
-    # TODO: Generate deals
-    deals = get_top_deals(customer, store, top_k=3)
-    if not deals:
-        return render(request,
-                      'core/no_deals.html',
-                      {
-                          'customer': customer,
-                          'store': store
-                      })
+    # Check if customer already has ACTIVE pending deals before generating new deals
+    existing_deals = DailyDeal.objects.filter(
+        customer=customer,
+        is_claimed=False,
+        expires_at__gt=timezone.now()
+    )
 
+    if existing_deals.exists():
+        # show existing deals since they're still valid
+        deals = existing_deals
+    else:
+        # Check 24h limit
+        if customer.last_deal_generated and (customer.last_deal_generated > timezone.now() - timezone.timedelta(hours=24)):
+            # Customer got deals in the last 24 hours --> Show waiting page
+            next_available = customer.last_deal_generated + timezone.timedelta(hours=24)
+            return render(request,
+                          'core/wait.html',
+                          {
+                              'customer': customer,
+                              'next_available': next_available,
+                              'message': 'شما امروز تخفیف‌های خود را دریافت کرده‌اید.'
+                          })
+
+        # TODO: Generate deals (only if 24h limit is passed)
+        deals = get_top_deals(customer, store, top_k=3)
+
+        if not deals:
+            return render(request,
+                          'core/no_deals.html',
+                          {
+                              'customer': customer,
+                              'store': store
+                          })
+
+        # Update last_deal_generated
+        customer.last_deal_generated = timezone.now()
+        customer.save()
+
+    # Show deals
     return render(request,
                   'core/deals.html',
                   {
@@ -433,7 +463,7 @@ def scan_qr(request, store_id=None):
                   })
 
 
-# ---------- REVEAL DISCOUNT (AJAX) ----------
+# ---------- FLIP THE CARD: REVEAL DISCOUNT (AJAX) ----------
 def reveal_discount(request, deal_id):
     """
     Customer taps a card → Reveal the discount via AJAX.
