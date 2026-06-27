@@ -171,11 +171,26 @@ def dashboard_home(request):
         expires_at__gt=timezone.now()   # gt: greater than ie deals that are not expired yet
     ).count()
 
+    # Count low stock products (stock between 1 and 3)
+    low_stock = Product.objects.filter(
+        store=store,
+        stock__gt=0,    # exclude out of stock
+        stock__lte=3
+    ).count()
+
+    # Count low stock products
+    out_of_stock = Product.objects.filter(
+        store=store,
+        is_out_of_stock=True
+    ).count()
+
     return render(request,
                   'core/dashboard_home.html',
                   {
                       'store': store,
-                      'pending_deals': pending_deals
+                      'pending_deals': pending_deals,
+                      'low_stock_products': low_stock,
+                      'out_of_stock_products': out_of_stock
                   })
 
 

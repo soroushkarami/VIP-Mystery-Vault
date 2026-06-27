@@ -34,6 +34,29 @@
         </div>
     </div>
 
+    <!-- Low Stock Warning -->
+{% if low_stock_products > 0 or out_of_stock_products > 0 %}
+    <div class="mt-4">
+        <div class="alert alert-warning d-flex justify-content-between align-items-center" role="alert">
+            <div>
+                <strong>⚠️ Inventory Alert:</strong>
+                {% if low_stock_products > 0 %}
+                    <span>{{ low_stock_products }} product{% if low_stock_products > 1 %}s{% endif %} with low stock (≤ 3 left)</span>
+                {% endif %}
+                {% if low_stock_products > 0 and out_of_stock_products > 0 %}
+                    &nbsp;|&nbsp;
+                {% endif %}
+                {% if out_of_stock_products > 0 %}
+                    <span>{{ out_of_stock_products }} product{% if out_of_stock_products > 1 %}s{% endif %} out of stock</span>
+                {% endif %}
+            </div>
+            <a href="{% url 'product_list' %}" class="btn btn-sm btn-warning">
+                📦 Manage Inventory
+            </a>
+        </div>
+    </div>
+{% endif %}
+
     <div class="mt-4">
         <a href="{% url 'upload_inventory' %}" class="btn btn-success w-100">📤 Upload New Inventory</a>
     </div>
