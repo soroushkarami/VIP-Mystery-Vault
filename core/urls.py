@@ -1,18 +1,23 @@
 from django.urls import path
 from django.views.generic import RedirectView
-from .views import (UploadInventoryView,
-                    dashboard_home,
-                    pending_deals,
-                    confirm_sold,
-                    toggle_out_of_stock,
-                    product_list,
-                    scan_qr,
-                    reveal_discount)
-
+from .views import (
+    UploadInventoryView,
+    dashboard_home,
+    pending_deals,
+    confirm_sold,
+    toggle_out_of_stock,
+    product_list,
+    scan_qr,
+    reveal_discount,
+    login_redirect,
+)
 
 urlpatterns = [
-    path('', RedirectView.as_view(url='/upload-inventory/', permanent=False), name='home'),
+    # Redirect root to login page
+    path('', RedirectView.as_view(url='/login/', permanent=False), name='home'),
+
     path('upload-inventory/', UploadInventoryView.as_view(), name='upload_inventory'),
+    path('login-redirect/', login_redirect, name='login_redirect'),
 
     # Dashboard URLs
     path('dashboard/', dashboard_home, name='dashboard_home'),
@@ -23,6 +28,6 @@ urlpatterns = [
 
     # Customer QR URLs
     path('scan/<int:store_id>/', scan_qr, name='scan_qr'),
-    path('deals/<int:store_id>/', scan_qr, name='show_deals'),  # After registration
+    path('deals/<int:store_id>/', scan_qr, name='show_deals'),
     path('reveal/<int:deal_id>/', reveal_discount, name='reveal_discount'),
 ]

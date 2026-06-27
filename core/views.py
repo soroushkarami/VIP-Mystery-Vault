@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.core.files.base import ContentFile
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .models import Store, Product, Customer, DailyDeal
 from .forms import UploadInventoryForm, CustomerRegistrationForm
@@ -17,10 +18,15 @@ import pandas as pd
 import zipfile
 
 
-class UploadInventoryView(FormView):
+class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in users(registered sellers) can access
     template_name = 'core/upload_inventory.html'
     form_class = UploadInventoryForm
-    success_url = reverse_lazy('admin:index')   # if upload is successful, send seller to the Admin panel
+    success_url = reverse_lazy('dashboard_home')   # if upload is successful, Redirect to dashboard
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user  # Pass the logged-in user to the form
+        return kwargs
 
     def form_valid(self, form):
         """
@@ -132,6 +138,15 @@ class UploadInventoryView(FormView):
 
         # calls the parent (FormView) which does the redirect to success_url (admin:index)
         return super().form_valid(form)
+
+
+@login_required
+def login_redirect(request):
+    """Redirect admin users to admin panel, sellers to dashboard"""
+    if request.user.is_superuser:
+        return redirect('/soroush_panel/')
+    else:
+        return redirect('/dashboard/')
 
 
 @login_required

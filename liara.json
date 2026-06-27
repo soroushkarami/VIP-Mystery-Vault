@@ -1,8 +1,8 @@
 {
   "disks": [
     {
-      "name": "media",
-      "mountTo": "app/media"
+      "name": "Media",
+      "mountTo": "/app/media"
     }
   ],
   "app": "vip-mysteryvault"

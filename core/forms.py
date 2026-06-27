@@ -5,12 +5,21 @@ from .normalizer import persian_to_english_numbers, normalize_size
 
 class UploadInventoryForm(forms.Form):
     # Create a dropdown menu on the page
-    store = forms.ModelChoiceField(queryset=Store.objects.all(),    # Admin can see all stores
-                                   label='Select Store')
+    store = forms.ModelChoiceField(
+        queryset=Store.objects.none(),  # Empty by default
+        label='Select Store'
+    )
     # Create a file upload button on the page
     excel_file = forms.FileField(label="Excel File (.xlsx)")
     zip_images = forms.FileField(required=False,        # optional
                                  label="ZIP File with Photos")
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)     # Get the logged-in user(seller)
+        super().__init__(*args, **kwargs)
+        if user:
+            # Only show this user's stores to him
+            self.fields['store'].queryset = Store.objects.filter(user=user)
 
 
 class CustomerRegistrationForm(forms.Form):
