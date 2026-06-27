@@ -68,6 +68,7 @@ class Customer(models.Model):
     last_deal_generated = models.DateTimeField(null=True, blank=True)
     cooldown_until = models.DateTimeField(null=True, blank=True)
     notification_message = models.TextField(blank=True, null=True)
+    special_offer_used = models.BooleanField(default=False)
 
     def __str__(self):
         return f'{self.phone} - {self.store}'

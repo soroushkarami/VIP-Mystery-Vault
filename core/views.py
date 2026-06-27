@@ -12,7 +12,7 @@ from django.http import HttpResponse
 from .models import Store, Product, Customer, DailyDeal
 from .forms import UploadInventoryForm, CustomerRegistrationForm
 from .normalizer import normalize_columns, persian_to_english_numbers, normalize_size
-from .utils import get_top_deals, is_in_cooldown, update_visit_and_cooldown
+from .utils import get_top_deals, is_in_cooldown, update_visit_and_cooldown, get_special_offer
 
 import os
 import pandas as pd
@@ -465,6 +465,23 @@ def scan_qr(request, store_id=None):
                           'cooldown_until': customer.cooldown_until,
                           'message': 'You have visited 3 times without purchasing. Take a week off, then come back for a special deal.!'
                       })
+
+    # Check if customer has just come out of cooldown and hasn't received the Special Offer yet
+    if (not customer.special_offer_used) and customer.cooldown_until and customer.cooldown_until < timezone.now():
+        # Clear the cooldown flag
+        customer.cooldown_until = None
+        customer.save()
+
+        # Generate Special Offer: 1 item at 30% off
+        special_deal = get_special_offer(customer, store)
+        if special_deal:
+            customer.special_offer_used = True
+            customer.save()
+            return render(request, 'core/special_offer.html', {
+                'customer': customer,
+                'store': store,
+                'deal': special_deal
+            })
 
     # Check if customer already has ACTIVE pending deals before generating new deals
     existing_deals = DailyDeal.objects.filter(

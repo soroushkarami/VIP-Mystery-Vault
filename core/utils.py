@@ -124,3 +124,45 @@ def update_visit_and_cooldown(customer, made_purchase=False):
         return True
 
     return False
+
+
+def get_special_offer(customer, store):
+    """Generate the Final Offer: 1 absolute best match at 30% off"""
+    products = Product.objects.filter(
+        store=store,
+        size=customer.size,
+        stock__gt=0,
+        is_out_of_stock=False
+    )
+
+    if not products.exists():
+        return None
+
+    # Score each product (same logic as get_top_deals, but with higher weights and picking only the best)
+    style_tags = customer.style_tags.get('categories', {})
+    scores = []
+
+    for product in products:
+        the_score = 0
+        if product.category in style_tags:
+            the_score += style_tags[product.category] * 10
+
+        if product.has_image:
+            the_score += 5
+
+        the_score += int(product.price / 100000)
+
+        scores.append((product, the_score))
+
+    scores.sort(key=lambda x: x[1], reverse=True)
+    best_product = scores[0][0]
+
+    # Create a deal with 30% off (final offer)
+    deal = DailyDeal.create_deal(
+        customer=customer,
+        product=best_product,
+        discount=30,
+        hours=6
+    )
+
+    return deal
