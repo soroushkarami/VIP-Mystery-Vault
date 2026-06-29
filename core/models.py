@@ -70,6 +70,7 @@ class Customer(models.Model):
     notification_message = models.TextField(blank=True, null=True)
     special_offer_used = models.BooleanField(default=False)
     # fingerprint + IP for phone verification
+    created_at = models.DateTimeField(auto_now_add=True)
     fingerprint = models.CharField(max_length=255, null=True, blank=True,
                                    db_index=True)
     registration_ip = models.GenericIPAddressField(null=True, blank=True)
