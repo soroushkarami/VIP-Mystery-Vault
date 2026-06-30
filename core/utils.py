@@ -166,3 +166,14 @@ def get_special_offer(customer, store):
     )
 
     return deal
+
+
+def generate_sku(store_id, product_code, size, color=None):
+    """
+    Generate a unique SKU: STORE-PRODUCT_CODE-SIZE-COLOR
+    Example: 1-DRESS-01-M-BLK
+    """
+    parts = [str(store_id), product_code, size]
+    if color:
+        parts.append(color)
+    return '-'.join(parts)

@@ -44,6 +44,10 @@ class Product(models.Model):
     is_out_of_stock = models.BooleanField(default=False)
     image = models.ImageField(upload_to='products/',
                               null=True, blank=True)
+    # for automatic sku generation
+    product_code = models.CharField(max_length=50, null=True, blank=True,
+                                    db_index=True)
+    color = models.CharField(max_length=100, null=True, blank=True)
 
     def __str__(self):
         return f'{self.name} [{self.sku}]'

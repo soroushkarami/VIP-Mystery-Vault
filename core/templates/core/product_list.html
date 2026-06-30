@@ -9,7 +9,10 @@
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2>📦 Products</h2>
-        <a href="{% url 'dashboard_home' %}" class="btn btn-outline-secondary">← Back</a>
+        <div>
+            <a href="{% url 'dashboard_home' %}" class="btn btn-outline-secondary">← Back</a>
+            <a href="{% url 'upload_inventory' %}" class="btn btn-success ms-2">📤 Upload Excel</a>
+        </div>
     </div>
 
     {% if messages %}
@@ -24,6 +27,7 @@
                 <tr>
                     <th>Name</th>
                     <th>SKU</th>
+                    <th>Price</th>
                     <th>Stock</th>
                     <th>Status</th>
                     <th>Action</th>
@@ -31,18 +35,34 @@
             </thead>
             <tbody>
                 {% for product in products %}
-                    <tr>
+                    <tr id="product-row-{{ product.id }}">
                         <td>{{ product.name }}</td>
                         <td>{{ product.sku }}</td>
-                        <td>{{ product.stock }}</td>
+                        <td>
+                            <input type="number"
+                                   id="price-{{ product.id }}"
+                                   value="{{ product.price }}"
+                                   class="form-control form-control-sm"
+                                   style="width: 120px;">
+                        </td>
+                        <td>
+                            <input type="number"
+                                   id="stock-{{ product.id }}"
+                                   value="{{ product.stock }}"
+                                   class="form-control form-control-sm"
+                                   style="width: 80px;">
+                        </td>
                         <td>
                             {% if product.is_out_of_stock %}
-                                <span class="badge bg-danger">Out of Stock</span>
+                                <span class="badge bg-danger" id="status-{{ product.id }}">Out of Stock</span>
                             {% else %}
-                                <span class="badge bg-success">In Stock</span>
+                                <span class="badge bg-success" id="status-{{ product.id }}">In Stock</span>
                             {% endif %}
                         </td>
                         <td>
+                            <button onclick="updateProduct({{ product.id }})" class="btn btn-sm btn-primary">
+                                💾 Update
+                            </button>
                             <form method="post" action="{% url 'toggle_out_of_stock' product.id %}" class="d-inline">
                                 {% csrf_token %}
                                 <button type="submit"
@@ -54,11 +74,88 @@
                         </td>
                     </tr>
                 {% empty %}
-                    <tr><td colspan="5" class="text-center">No products found. Upload inventory first!</td></tr>
+                    <tr><td colspan="6" class="text-center">No products found. Upload inventory first!</td></tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
+
+<!-- ✅ Toast notification -->
+<div id="toast" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050; display: none;">
+    <div id="toast-content" class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <strong class="me-auto">✅ Product Updated</strong>
+            <button type="button" class="btn-close" onclick="hideToast()"></button>
+        </div>
+        <div class="toast-body" id="toast-message">
+            Product updated successfully!
+        </div>
+    </div>
+</div>
+
+<script>
+function updateProduct(productId) {
+    const stockInput = document.getElementById('stock-' + productId);
+    const priceInput = document.getElementById('price-' + productId);
+
+    // Show loading state
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.textContent = '⏳ Updating...';
+    btn.disabled = true;
+
+    fetch('/dashboard/update_product/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            'product_id': productId,
+            'stock': stockInput.value,
+            'price': priceInput.value
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // ✅ Update stock display
+            const stockCell = stockInput.closest('td');
+            if (data.new_stock === 0) {
+                document.getElementById('status-' + productId).textContent = 'Out of Stock';
+                document.getElementById('status-' + productId).className = 'badge bg-danger';
+            } else {
+                document.getElementById('status-' + productId).textContent = 'In Stock';
+                document.getElementById('status-' + productId).className = 'badge bg-success';
+            }
+            showToast('✅ Product updated successfully!');
+        } else {
+            showToast('❌ Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        showToast('❌ Error updating product.');
+    })
+    .finally(() => {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    });
+}
+
+function showToast(message) {
+    const toast = document.getElementById('toast');
+    const toastMessage = document.getElementById('toast-message');
+    toastMessage.textContent = message;
+    toast.style.display = 'block';
+    setTimeout(() => {
+        toast.style.display = 'none';
+    }, 3000);
+}
+
+function hideToast() {
+    document.getElementById('toast').style.display = 'none';
+}
+</script>
 </body>
 </html>

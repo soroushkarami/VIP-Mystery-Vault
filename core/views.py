@@ -1,3 +1,5 @@
+from unittest import skipIf
+
 from django.http import JsonResponse
 from django.shortcuts import redirect, render, get_object_or_404
 from django.urls import reverse_lazy
@@ -8,17 +10,19 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse
+from django.views.decorators.csrf import csrf_exempt
 
 from .models import Store, Product, Customer, DailyDeal
 from .forms import UploadInventoryForm, CustomerRegistrationForm
 from .normalizer import normalize_columns, persian_to_english_numbers, normalize_size
-from .utils import get_top_deals, is_in_cooldown, update_visit_and_cooldown, get_special_offer
+from .utils import get_top_deals, is_in_cooldown, update_visit_and_cooldown, get_special_offer, generate_sku
 
 import os
 import pandas as pd
 import zipfile
 import qrcode
 from io import BytesIO
+import json
 
 
 class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in users(registered sellers) can access
@@ -53,13 +57,8 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
         products_created = 0
         errors = []
 
-        # check columns: SKU, Name, Price, Size, Category, Stock
+        # check columns: Name, Price, Size, Category, Stock, Color, ProductCode(-> Sku)
         for idx, row in df.iterrows():
-            # SKU col
-            sku = str(row.get('Sku', '')).strip()
-            if not sku:
-                continue
-
             # NAME col
             name = row.get('Name', '-')
 
@@ -88,6 +87,22 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
             # Normalize Persian sizes
             size = normalize_size(row.get('Size', 'M'))
 
+            # COLOR col
+            color = row.get('Color', '').strip()
+
+            # Get product_code(for sku generation)
+            product_code = str(row.get('ProductCode', '')).strip()
+            if not product_code:
+                # Auto-generate it from name
+                product_code = name.replace(' ', '-').upper()
+                # Limit length to avoid issues
+                product_code = product_code[:30]
+                # Add a warning so you know it was auto-generated
+                errors.append(f"ℹ️ ProductCode auto-generated for '{name}': {product_code}")
+
+            # AUTO-GENERATE SKU col
+            sku = generate_sku(store.id, product_code, size, color)
+
             # Update or create the product
             products, created = Product.objects.update_or_create(
                 store =store,
@@ -98,6 +113,8 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
                     'size':size,
                     'category':category,
                     'stock':stock,
+                    'product_code': product_code,
+                    'color': color,
                     'is_out_of_stock':False,
                 }
             )
@@ -344,6 +361,63 @@ def product_list(request):
                       'store': store,
                       'products': products
                   })
+
+
+@login_required
+def update_product(request):
+    """
+    AJAX view to update product stock and price.
+    Only the seller who owns the store can update products.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request method'},
+                            status=400)
+
+    try:
+        data = json.loads(request.body)
+        product_id = data.get('product_id')
+        new_stock = int(data.get('stock'))
+        new_price = int(data.get('price'))
+
+        # Get the product
+        product = get_object_or_404(Product, id=product_id)
+
+        # Security: Ensure the product belongs to the logged-in user's store
+        if product.store != request.user.store:
+            return JsonResponse({'success': False,
+                                 'error': 'You do not have permission to update this product.'},
+                                status=403)
+        # TODO: update product
+        product.stock = new_stock
+        product.price = new_price
+
+        # Auto-toggle out of stock if stock is 0
+        if new_stock == 0:
+            product.is_out_of_stock = True
+        else:
+            product.is_out_of_stock = False
+
+        product.save()
+
+        return JsonResponse({
+            'success': True,
+            'new_stock': product.stock,
+            'new_price': product.price,
+            'is_out_of_stock': product.is_out_of_stock
+        })
+
+    except Product.DoesNotExist:
+        return JsonResponse({'success': False,
+                             'error': 'Product not found.'},
+                            status=404)
+    except ValueError:
+        return JsonResponse({'success': False,
+                             'error': 'Invalid stock or price.'},
+                             status=400)
+    except Exception as e:
+        return JsonResponse({'success': False,
+                             'error': str(e)},
+                            status=500)
 
 
 @login_required
