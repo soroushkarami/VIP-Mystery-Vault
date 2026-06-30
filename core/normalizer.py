@@ -17,6 +17,8 @@ COLUMN_MAPPING = {
     'سایز': 'Size',
     'اندازه': 'Size',
     'سایز محصول': 'Size',
+    'product_code': 'ProductCode',
+    'productcode': 'ProductCode',
 }
 
 

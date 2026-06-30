@@ -131,7 +131,7 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
             color = row.get('Color', '').strip()
 
             # Get product_code(for sku generation)
-            product_code = str(row.get('ProductCode', '')).strip()
+            pproduct_code = str(row.get('ProductCode') or row.get('product_code') or row.get('Product_code') or '').strip()
             if not product_code:
                 # Auto-generate it from name
                 product_code = name.replace(' ', '-').upper()
@@ -163,7 +163,7 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
         # Build a list of SKUs for the user (for renaming images)
         sku_list = []
         for idx, row in df.iterrows():
-            product_code = str(row.get('ProductCode', '')).strip()
+            product_code = str(row.get('ProductCode') or row.get('product_code') or row.get('Product_code') or '').strip()
             size = normalize_size(row.get('Size', 'M'))
             color = row.get('Color', '').strip()
 
