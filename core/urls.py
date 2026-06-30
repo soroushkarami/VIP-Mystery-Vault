@@ -11,7 +11,8 @@ from .views import (
     reveal_discount,
     login_redirect,
     generate_qr,
-    update_product
+    update_product,
+    view_skus
 )
 
 urlpatterns = [
@@ -29,6 +30,7 @@ urlpatterns = [
     path('dashboard/products/', product_list, name='product_list'),
     path('dashboard/qr/', generate_qr, name='generate_qr'),
     path('dashboard/update_product/', update_product, name='update_product'),
+    path('dashboard/skus/', view_skus, name='view_skus'),
 
     # Customer QR URLs
     path('scan/<int:store_id>/', scan_qr, name='scan_qr'),

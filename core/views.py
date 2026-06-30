@@ -160,6 +160,21 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
             )
             products_created += 1 if created else 0
 
+        # Build a list of SKUs for the user (for renaming images)
+        sku_list = []
+        for idx, row in df.iterrows():
+            product_code = str(row.get('ProductCode', '')).strip()
+            size = normalize_size(row.get('Size', 'M'))
+            color = row.get('Color', '').strip()
+
+            if product_code:
+                sku = generate_sku(store.id, product_code, size, color)
+                sku_list.append(sku)
+
+        # store the sku list in session for display
+        self.request.session['uploaded_skus'] = sku_list
+        self.request.session['store_id'] = store.id
+
         #TODO 2. PROCESS ZIP (if provided)
         if zip_file:
             try:
@@ -207,8 +222,14 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
             messages.warning(self.request,
                              f"Processed {products_created} products, but had issues: {', '.join(errors[:5])}")
         else:
-            messages.success(self.request,
-                             f"Success! {products_created} products added/updated.")
+            sku_message = "✅ Success! Products added/updated.\n\n📋 SKUs for your photos:\n"
+            for sku in sku_list[:10]:  # Show first 10
+                sku_message += f"  • {sku}.jpg\n"
+            if len(sku_list) > 10:
+                sku_message += f"  ... and {len(sku_list) - 10} more.\n"
+            sku_message += "\n📸 Rename your photos to match these SKUs before uploading the ZIP."
+
+            messages.success(self.request, sku_message)
 
         # calls the parent (FormView) which does the redirect to success_url (admin:index)
         return super().form_valid(form)
@@ -479,6 +500,36 @@ def update_product(request):
         return JsonResponse({'success': False,
                              'error': str(e)},
                             status=500)
+
+
+@subscription_required
+@login_required
+def view_skus(request):
+    """Show a list of all SKUs for the seller's store (for photo naming)"""
+    try:
+        store = request.user.store
+    except Store.DoesNotExist:
+        messages.error(request,
+                       'No store linked to your account.')
+        return redirect('dashboard_home')
+
+    products = Product.objects.filter(store=store).order_by('product_code', 'size')
+
+    # group by product_code
+    grouped = {}
+    for product in products:
+        key = product.product_code or 'no-code'
+        if key not in grouped:
+            grouped[key] = []
+        grouped[key].append(product)
+
+    return render(request,
+                  'core/view_skus.html',
+                  {
+                      'store': store,
+                      'grouped': grouped,
+                      'total': products.count()
+                  })
 
 
 @subscription_required
