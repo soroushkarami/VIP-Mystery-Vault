@@ -320,14 +320,11 @@ def confirm_sold(request, deal_id):
     if request.method != 'POST':
         return redirect('pending_deals')
 
-    deal = get_object_or_404(DailyDeal,
-                             id=deal_id,
-                             is_claimed=False)
+    deal = get_object_or_404(DailyDeal, id=deal_id, is_claimed=False)
 
     # safety check – ensure the deal belongs to this user's store
     if deal.customer.store != request.user.store:
-        messages.error(request,
-                       "You don't have permission to confirm this deal.")
+        messages.error(request, "You don't have permission to confirm this deal.")
         return redirect('pending_deals')
 
     # TODO 1. Subtract stock
@@ -338,20 +335,27 @@ def confirm_sold(request, deal_id):
             product.is_out_of_stock = True
         product.save()
 
-    # TODO 2. Mark deal as claimed
-    deal.is_claimed = True      # seller sold
-    deal.is_bought = True       # customer bought
-    deal.save()
-
-    # TODO 3. Update customer style_tags
+    # TODO 2. Mark ALL deals for this customer as claimed
+    # Get all pending deals for this customer (active and unclaimed)
     customer = deal.customer
+    pending_deals = DailyDeal.objects.filter(
+        customer=customer,
+        is_claimed=False,
+        expires_at__gt=timezone.now()
+    )
+
+    # Mark ALL pending deals as claimed
+    count = pending_deals.update(is_claimed=True, is_bought=True)
+
+    # TODO 3. Update customer style_tags (only for the purchased product)
     customer.add_purchase(product)
 
     # Reset visit count after purchase
     update_visit_and_cooldown(customer, made_purchase=True)
 
     messages.success(request,
-                     f'✅ Deal confirmed! {product.name} sold to {customer.phone}.')
+                     f'✅ Deal confirmed! {product.name} sold to {customer.phone}. '
+                     f'({count} deals removed from pending list)')
     return redirect('pending_deals')
 
 
