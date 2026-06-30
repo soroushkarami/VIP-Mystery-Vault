@@ -129,7 +129,7 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
             size = normalize_size(row.get('Size', 'M'))
 
             # COLOR col
-            color = row.get('Color', '').strip()
+            color = str(row.get('Color', '')).strip()
 
             # Get product_code(for sku generation)
             product_code = str(row.get('ProductCode') or row.get('product_code') or row.get('Product_code') or '').strip()
