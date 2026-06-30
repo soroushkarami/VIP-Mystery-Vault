@@ -1,6 +1,7 @@
 import random
 from django.utils import timezone
-from .models import DailyDeal, Product
+from django.shortcuts import render, redirect
+from .models import DailyDeal, Product, Store
 
 
 def calculate_safe_discount(product, store):
@@ -177,3 +178,27 @@ def generate_sku(store_id, product_code, size, color=None):
     if color:
         parts.append(color)
     return '-'.join(parts)
+
+
+def subscription_required(view_funcs):
+    def wrapper(request, *args, **kwargs):
+        # 1. Check if user is logged in
+        if not request.user.is_authenticated:
+            return redirect('login')
+
+        # 2. Check if their subscription is active
+        try:
+            store = request.user.store
+            if not store.is_subscription_active:
+                return render(request,
+                              'core/subscription_expired.html',
+                              {
+                                  'store': store,
+                                  'message': 'اشتراک شما منقضی شده است. لطفاً برای تمدید با پشتیبانی تماس بگیرید'
+                              })
+        except Store.DoesNotExist:
+            pass
+
+        # 3. If all checks pass → Let them in!
+        return view_funcs(request, *args, **kwargs)
+    return wrapper

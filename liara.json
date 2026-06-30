@@ -5,5 +5,12 @@
       "mountTo": "/app/media"
     }
   ],
+  "cron": [
+    {
+      "name": "deactivate-expired-stores",
+      "schedule": "0 */12 * * *",
+      "command": "python manage.py deactivate_expired_stores"
+    }
+  ],
   "app": "vip-mysteryvault"
 }

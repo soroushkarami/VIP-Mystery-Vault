@@ -15,7 +15,12 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import Store, Product, Customer, DailyDeal
 from .forms import UploadInventoryForm, CustomerRegistrationForm
 from .normalizer import normalize_columns, persian_to_english_numbers, normalize_size
-from .utils import get_top_deals, is_in_cooldown, update_visit_and_cooldown, get_special_offer, generate_sku
+from .utils import (get_top_deals,
+                    is_in_cooldown,
+                    update_visit_and_cooldown,
+                    get_special_offer,
+                    generate_sku,
+                    subscription_required)
 
 import os
 import pandas as pd
@@ -169,6 +174,7 @@ def login_redirect(request):
         return redirect('/dashboard/')
 
 
+@subscription_required      # defined in utils
 @login_required
 def dashboard_home(request):
     try:
@@ -207,11 +213,13 @@ def dashboard_home(request):
                       'store': store,
                       'pending_deals': pending_deals,
                       'low_stock_products': low_stock,
-                      'out_of_stock_products': out_of_stock
+                      'out_of_stock_products': out_of_stock,
+                      'days_remaining': store.days_remaining
                   })
 
 
 # ---------- PENDING DEALS LIST ----------
+@subscription_required
 @login_required
 def pending_deals(request):
     try:
@@ -236,6 +244,7 @@ def pending_deals(request):
 
 
 # ---------- CONFIRM SOLD ----------
+@subscription_required
 @login_required
 def confirm_sold(request, deal_id):
     if request.method != 'POST':
@@ -277,6 +286,7 @@ def confirm_sold(request, deal_id):
 
 
 # ---------- TOGGLE OUT OF STOCK ----------
+@subscription_required
 @login_required
 def toggle_out_of_stock(request, product_id):
     if request.method != 'POST':
@@ -346,6 +356,7 @@ def toggle_out_of_stock(request, product_id):
 
 
 # ---------- PRODUCT LIST (for Out of Stock toggle) ----------
+@subscription_required
 @login_required
 def product_list(request):
     try:
@@ -363,6 +374,7 @@ def product_list(request):
                   })
 
 
+@subscription_required
 @login_required
 def update_product(request):
     """
@@ -420,6 +432,7 @@ def update_product(request):
                             status=500)
 
 
+@subscription_required
 @login_required
 def generate_qr(request):
     """Generate a QR code for the seller's store"""

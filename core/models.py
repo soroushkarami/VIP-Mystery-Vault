@@ -20,6 +20,26 @@ class Store(models.Model):
         related_name='store'    # This lets us do: request.user.store
     )
 
+    @property
+    def days_remaining(self):
+        """Return days remaining until subscription expiry, or None if no expiry."""
+        if not self.subscription_expiry:
+            return None
+        now = timezone.now()
+        if self.subscription_expiry < now:
+            return 0
+
+        remained = self.subscription_expiry - now
+        return remained
+
+    @property
+    def is_subscription_active(self):
+        if not self.subscription_active:
+            return False
+        if self.subscription_expiry:
+            return self.subscription_expiry > timezone.now()    # if expiration is later than now return True
+        return True     # if no expiry is set -> active
+
     def __str__(self):
         return self.name
 
