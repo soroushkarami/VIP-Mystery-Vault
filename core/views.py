@@ -96,6 +96,7 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
 
         products_created = 0
         errors = []
+        sku_list = []
 
         # check columns: Name, Price, Size, Category, Stock, Color, ProductCode(-> Sku)
         for idx, row in df.iterrows():
@@ -111,7 +112,7 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
             try:
                 price = int(price_str) if price_str else 0
             except ValueError:
-                errors.append(f"Invalid price for SKU '{sku}': '{price_str}'")
+                errors.append(f"Invalid price for row {idx+2}: '{price_str}'")
                 price = 0
 
             # STOCK col
@@ -120,7 +121,7 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
             try:
                 stock = int(stock_str) if stock_str else 0
             except ValueError:
-                errors.append(f"Invalid stock for SKU '{sku}': '{stock_str}'")
+                errors.append(f"Invalid stock for row '{idx+2}': '{stock_str}'")
                 stock = 0
 
             # SIZE col
@@ -131,7 +132,7 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
             color = row.get('Color', '').strip()
 
             # Get product_code(for sku generation)
-            pproduct_code = str(row.get('ProductCode') or row.get('product_code') or row.get('Product_code') or '').strip()
+            product_code = str(row.get('ProductCode') or row.get('product_code') or row.get('Product_code') or '').strip()
             if not product_code:
                 # Auto-generate it from name
                 product_code = name.replace(' ', '-').upper()
@@ -142,6 +143,7 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
 
             # AUTO-GENERATE SKU col
             sku = generate_sku(store.id, product_code, size, color)
+            sku_list.append(sku)
 
             # Update or create the product
             products, created = Product.objects.update_or_create(
@@ -159,17 +161,6 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
                 }
             )
             products_created += 1 if created else 0
-
-        # Build a list of SKUs for the user (for renaming images)
-        sku_list = []
-        for idx, row in df.iterrows():
-            product_code = str(row.get('ProductCode') or row.get('product_code') or row.get('Product_code') or '').strip()
-            size = normalize_size(row.get('Size', 'M'))
-            color = row.get('Color', '').strip()
-
-            if product_code:
-                sku = generate_sku(store.id, product_code, size, color)
-                sku_list.append(sku)
 
         # store the sku list in session for display
         self.request.session['uploaded_skus'] = sku_list
