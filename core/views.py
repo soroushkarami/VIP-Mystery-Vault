@@ -1,5 +1,3 @@
-from unittest import skipIf
-
 from django.http import JsonResponse
 from django.shortcuts import redirect, render, get_object_or_404
 from django.urls import reverse_lazy
@@ -22,12 +20,49 @@ from .utils import (get_top_deals,
                     generate_sku,
                     subscription_required)
 
+from PIL import Image
 import os
 import pandas as pd
 import zipfile
 import qrcode
 from io import BytesIO
 import json
+
+
+def resize_image(image_file, max_size=800, quality=80):
+    """
+    Resize an image to max 800px width/height while maintaining aspect ratio.
+    Returns the resized image as a BytesIO object ready for Django's ImageField.
+    """
+    # Open the image
+    img = Image.open(image_file)
+    # Check if image needs resizing
+    width, height = img.size
+    if width <= max_size and height <= max_size:
+        # reset file pointer and return original
+        image_file.seek(0)
+        return image_file
+
+    # Calculate new size (maintain aspect ratio)
+    if width > height:
+        new_width = max_size
+        new_height = int(height * (max_size / width))
+    else:
+        new_height = max_size
+        new_width = int(width * (max_size / height))
+
+    # resize the img
+    img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+    # Save to BytesIO
+    output = BytesIO()
+    img.save(output,
+             format='JPEG' if img.mode == 'RGB' else 'PNG',
+             quality=quality,
+             optimize=True)
+    output.seek(0)
+
+    return output
 
 
 class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in users(registered sellers) can access
@@ -136,6 +171,10 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
                         if not sku_from_file:
                             continue
 
+                        # Check if it's an image file
+                        if ext.lower() not in ['.jpg', '.jpeg', '.png', '.gif', 'webp']:
+                            continue
+
                         # Find the product with this SKU
                         try:
                             # search for the product with that SKU in the store
@@ -143,12 +182,22 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
                                                           sku=sku_from_file)
 
                             # Read the file content and save it to the product's image field
-                            content = zf.read(name)     # reads the raw bytes of the image
+                            file_content = zf.read(name)     # reads the raw bytes of the image
+                            file_bytes = BytesIO(file_content)
+
+                            # Resize and compress the image if needed
+                            resized_img = resize_image(file_bytes, max_size=800, quality=80)
+
+                            # Save the resized image to the product
+                            # Extract the filename from the original name
+                            filename = os.path.basename(name)
                             product.image.save(f"{sku_from_file}{ext}",
-                                               ContentFile(content),
-                                               save=True)   # saves the file to media/products/
+                                               ContentFile(resized_img.read()),
+                                               save=True)
                         except Product.DoesNotExist:
                             errors.append(f"SKU '{sku_from_file}' not found for image '{name}'")
+                        except Exception as e:
+                            errors.append(f"Error processing image '{name}': {str(e)}")
 
             except Exception as e:
                 errors.append(f"ZIP processing error: {str(e)}")
