@@ -4,32 +4,6 @@ from django.shortcuts import render, redirect
 from .models import DailyDeal, Product, Store
 
 
-def calculate_safe_discount(product, store):
-    """
-    Calculate a safe discount percentage (10-30%) based on store markup.
-    Higher markup = higher possible discount.
-    """
-    markup = store.markup_percent
-
-    # Base discount: always at least 10%
-    base_discount = 10
-
-    # MAX discount depends on markup
-    if markup >= 150:
-        max_discount = 30
-    elif markup >= 100:
-        max_discount = 25
-    elif markup >= 80:
-        max_discount = 20
-    else:
-        max_discount = 15
-
-    # base_discount < random discount < max_discount
-    the_discount = random.randint(base_discount, max_discount)
-
-    return the_discount
-
-
 def get_top_deals(customer, store, top_k=3):
     """
     The 'Brain' – picks the Top k products for a customer.
@@ -89,6 +63,32 @@ def get_top_deals(customer, store, top_k=3):
         deals.append(deal)
 
     return deals
+
+
+def calculate_safe_discount(product, store):
+    """
+    Calculate a safe discount percentage (10-30%) based on store markup.
+    Higher markup = higher possible discount.
+    """
+    markup = store.markup_percent
+
+    # Base discount: always at least 10%
+    base_discount = 10
+
+    # MAX discount depends on markup
+    if markup >= 150:
+        max_discount = 30       # High markup -> safe to discount more
+    elif markup >= 100:
+        max_discount = 25       # Medium-high markup -> moderate-high discount
+    elif markup >= 80:
+        max_discount = 20       # Medium markup -> moderate discount
+    else:
+        max_discount = 15       # Low markup -> discount carefully
+
+    # base_discount < random discount < max_discount
+    the_discount = random.randint(base_discount, max_discount)
+
+    return the_discount
 
 
 def is_in_cooldown(customer):
@@ -163,7 +163,7 @@ def get_special_offer(customer, store):
         customer=customer,
         product=best_product,
         discount=30,
-        hours=6
+        hours=8
     )
 
     return deal
@@ -180,8 +180,9 @@ def generate_sku(store_id, product_code, size, color=None):
     return '-'.join(parts)
 
 
-def subscription_required(view_funcs):
-    def wrapper(request, *args, **kwargs):
+def subscription_required(view_funcs):          # takes a view function as input.
+    def wrapper(request, *args, **kwargs):      # the actual security guard; checks the user's
+                                                # subscription before letting them through to the view.
         # 1. Check if user is logged in
         if not request.user.is_authenticated:
             return redirect('login')
@@ -199,6 +200,6 @@ def subscription_required(view_funcs):
         except Store.DoesNotExist:
             pass
 
-        # 3. If all checks pass → Let them in!
+        # 3. If all checks pass (logged in, subscription active) → Let them in!
         return view_funcs(request, *args, **kwargs)
     return wrapper

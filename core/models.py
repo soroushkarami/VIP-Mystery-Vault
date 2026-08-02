@@ -22,7 +22,7 @@ class Store(models.Model):
 
     @property
     def days_remaining(self):
-        """Return days remaining until subscription expiry, or None if no expiry."""
+        """Return days remaining until subscription expiry, or None if no expiry date."""
         if not self.subscription_expiry:
             return None
         now = timezone.now()
@@ -85,6 +85,7 @@ class Customer(models.Model):
     size = models.CharField(max_length=20,
                             choices=[('S', 'S'), ('M', 'M'), ('L', 'L'), ('XL', 'XL'),
                                      ('XXL', 'XXL'), ('XXXL', 'XXXL')])
+
     # Style tags as JSON: e.g., {"categories": {"Jacket": 3, "Shirt": 1}}
     style_tags = models.JSONField(default=dict)
     visit_count = models.PositiveIntegerField(default=0)
@@ -93,8 +94,8 @@ class Customer(models.Model):
     cooldown_until = models.DateTimeField(null=True, blank=True)
     notification_message = models.TextField(blank=True, null=True)
     special_offer_used = models.BooleanField(default=False)
-    # fingerprint + IP for phone verification
     created_at = models.DateTimeField(auto_now_add=True)
+    # fingerprint + IP for phone verification
     fingerprint = models.CharField(max_length=255, null=True, blank=True,
                                    db_index=True)
     registration_ip = models.GenericIPAddressField(null=True, blank=True)

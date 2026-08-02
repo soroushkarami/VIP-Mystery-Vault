@@ -1,6 +1,3 @@
-# -------------------------------------------------------------------
-# 1. COLUMN MAPPING (Persian Excel headers → English)
-# -------------------------------------------------------------------
 COLUMN_MAPPING = {
     # Common Persian headers
     'کد کالا': 'Sku',
@@ -17,14 +14,12 @@ COLUMN_MAPPING = {
     'سایز': 'Size',
     'اندازه': 'Size',
     'سایز محصول': 'Size',
+
     'product_code': 'ProductCode',
     'productcode': 'ProductCode',
 }
 
 
-# -------------------------------------------------------------------
-# 2. SIZE MAPPING (Persian sizes → English codes)
-# -------------------------------------------------------------------
 SIZE_MAPPING = {
     # Persian to English
     'اس': 'S',
@@ -61,9 +56,6 @@ SIZE_MAPPING = {
 }
 
 
-# -------------------------------------------------------------------
-# 3. HELPER FUNCTIONS
-# -------------------------------------------------------------------
 def normalize_columns(df):
     """
     Convert Persian column names to English.

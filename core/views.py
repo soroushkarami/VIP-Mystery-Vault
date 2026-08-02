@@ -71,9 +71,12 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
     success_url = reverse_lazy('dashboard_home')   # if upload is successful, Redirect to dashboard
 
     def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user  # Pass the logged-in user to the form
-        return kwargs
+        """
+        Ensures that when the form is created, it knows who the logged‑in user is
+        """
+        kwargs = super().get_form_kwargs()  # get Form's default args from FormView
+        kwargs['user'] = self.request.user  # add the logged-in user to the form
+        return kwargs   # pass the updated args to the FormView
 
     def form_valid(self, form):
         """
@@ -146,7 +149,7 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
             sku_list.append(sku)
 
             # Update or create the product
-            products, created = Product.objects.update_or_create(
+            products, created = Product.objects.update_or_create(   # 'created' is boolean
                 store =store,
                 sku=sku,
                 defaults={
@@ -195,8 +198,6 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
                             resized_img = resize_image(file_bytes, max_size=800, quality=80)
 
                             # Save the resized image to the product
-                            # Extract the filename from the original name
-                            filename = os.path.basename(name)
                             product.image.save(f"{sku_from_file}{ext}",
                                                ContentFile(resized_img.read()),
                                                save=True)
@@ -213,7 +214,7 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
             messages.warning(self.request,
                              f"Processed {products_created} products, but had issues: {', '.join(errors[:5])}")
         else:
-            sku_message = "✅ Success! Products added/updated.\n\n📋 SKUs for your photos:\n"
+            sku_message = "✅ Success! Products added/updated.\n\n📋 SKUs for your first 10 photos:\n"
             for sku in sku_list[:10]:  # Show first 10
                 sku_message += f"  • {sku}.jpg\n"
             if len(sku_list) > 10:
@@ -252,7 +253,7 @@ def dashboard_home(request):
     pending_deals = DailyDeal.objects.filter(
         customer__store=store,      # Only this store's customers
         is_claimed=False,
-        expires_at__gt=timezone.now()   # gt: greater than ie deals that are not expired yet
+        expires_at__gt=timezone.now()   # gt: greater than; ie deals that are not expired yet
     ).count()
 
     # Count low stock products (stock between 1 and 3)
@@ -262,7 +263,7 @@ def dashboard_home(request):
         stock__lte=3
     ).count()
 
-    # Count low stock products
+    # Count out of stock products
     out_of_stock = Product.objects.filter(
         store=store,
         is_out_of_stock=True

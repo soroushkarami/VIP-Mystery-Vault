@@ -15,10 +15,9 @@ class UploadInventoryForm(forms.Form):
                                  label="ZIP File with Photos")
 
     def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)     # Get the logged-in user(seller)
+        user = kwargs.pop('user', None)     # Get the logged-in user(seller) from kwarg dict
         super().__init__(*args, **kwargs)
-        if user:
-            # Only show this user's stores to him
+        if user:    # if the user exists, only show his stores to him
             self.fields['store'].queryset = Store.objects.filter(user=user)
 
 
@@ -48,7 +47,7 @@ class CustomerRegistrationForm(forms.Form):
         if len(phone) != 11:
             raise forms.ValidationError('شماره موبایل باید ۱۱ رقم باشد.')
 
-        # TODO 2: checkif it starts with 09
+        # TODO 2: check if it starts with 09
         if not phone.startswith('09'):
             raise forms.ValidationError('شماره موبایل باید با ۰۹ شروع شود.')
 
