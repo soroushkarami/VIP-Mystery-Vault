@@ -134,19 +134,33 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
             # COLOR col
             color = str(row.get('Color', '')).strip()
 
-            # Get product_code(for sku generation)
-            product_code = str(row.get('ProductCode') or row.get('product_code') or row.get('Product_code') or '').strip()
-            if not product_code:
-                # Auto-generate it from name
-                product_code = name.replace(' ', '-').upper()
-                # Limit length to avoid issues
-                product_code = product_code[:30]
-                # Add a warning so you know it was auto-generated
-                errors.append(f"ℹ️ ProductCode auto-generated for '{name}': {product_code}")
-
-            # AUTO-GENERATE SKU col
-            sku = generate_sku(store.id, product_code, size, color)
-            sku_list.append(sku)
+            # SKU col
+            sku_found = False
+            sku_from_excel = str(row.get('sku') or row.get('SKU') or row.get('Sku') or '').strip()
+            if sku_from_excel:
+                existing_product = Product.objects.filter(
+                    store=store,
+                    sku=sku_from_excel
+                ).first()
+                if existing_product:    # SKU exists in DB – use that instead of using Pruduct_code
+                    sku_found = True
+                    sku = sku_from_excel
+                    product_code = existing_product.product_code or sku_from_excel
+                    errors.append(f"Found existing product with SKU '{sku_from_excel}'. Will update.")
+            if not sku_found:
+                # Get product_code (for sku generation)
+                product_code = str(row.get('ProductCode') or row.get('product_code') or row.get('Product_code') or '').strip()
+                if not product_code:
+                    # Auto-generate it from name
+                    product_code = name.replace(' ', '-').upper()
+                    # Limit length to avoid issues
+                    product_code = product_code[:30]
+                    # Add a warning so you know it was auto-generated
+                    errors.append(f"ProductCode auto-generated for '{name}': {product_code}")
+                # AUTO-GENERATE SKU col
+                sku = generate_sku(store.id, product_code, size, color)
+                if sku_from_excel and not sku_found:
+                    errors.append(f"SKU '{sku_from_excel}' from Excel not found in DB. Generated new SKU: '{sku}'")
 
             # Update or create the product
             products, created = Product.objects.update_or_create(   # 'created' is boolean
@@ -164,6 +178,7 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
                 }
             )
             products_created += 1 if created else 0
+            sku_list.append(sku)
 
         # store the sku list in session for display
         self.request.session['uploaded_skus'] = sku_list
