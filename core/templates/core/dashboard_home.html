@@ -36,7 +36,38 @@
         </div>
         <div>
             <a href="{% url 'account_settings' %}" class="btn btn-outline-secondary me-2">⚙️ حساب کاربری</a>
-            <a href="{% url 'logout' %}" class="btn btn-outline-danger">خروج</a>
+            <form method="post" action="{% url 'logout' %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-danger">خروج</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-4">
+            <div class="card text-center border-primary">
+                <div class="card-body">
+                    <h2 class="display-6">{{ total_customers }}</h2>
+                    <p class="card-text text-muted">👤 مشتریان این ماه</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-4">
+            <div class="card text-center border-success">
+                <div class="card-body">
+                    <h2 class="display-6">{{ total_sales }}</h2>
+                    <p class="card-text text-muted">💰 فروش این ماه</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-4">
+            <div class="card text-center border-warning">
+                <div class="card-body">
+                    <h2 class="display-6">{{ conversion_rate }}%</h2>
+                    <p class="card-text text-muted">📈 نرخ تبدیل</p>
+                </div>
+            </div>
         </div>
     </div>
 

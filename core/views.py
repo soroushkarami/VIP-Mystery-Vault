@@ -275,6 +275,8 @@ def upload_logo(request):
                   })
 
 
+# Seller Experience
+# ---------- MAIN PAGE ----------
 @subscription_required      # defined in utils
 @login_required
 def dashboard_home(request):
@@ -308,6 +310,27 @@ def dashboard_home(request):
         is_out_of_stock=True
     ).count()
 
+    # STATS:
+    # get the start of this month (for stats)
+    now = timezone.now()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    # 1.customers this month
+    total_customers = Customer.objects.filter(
+        store=store,
+        created_at__gte=month_start,
+    ).count()
+    # 2.sales this month
+    total_sales = DailyDeal.objects.filter(
+        customer__store=store,
+        is_claimed=True,
+        created_at__gte=month_start
+    ).count()
+    # 3.conversion rate
+    if total_customers != 0:
+        conversion = round(total_sales/total_customers * 100)
+    else:
+        conversion = 0
+
     return render(request,
                   'core/dashboard_home.html',
                   {
@@ -315,7 +338,10 @@ def dashboard_home(request):
                       'pending_deals': pending_deals,
                       'low_stock_products': low_stock,
                       'out_of_stock_products': out_of_stock,
-                      'days_remaining': store.days_remaining
+                      'days_remaining': store.days_remaining,
+                      'total_customers': total_customers,
+                      'total_sales': total_sales,
+                      'conversion': conversion
                   })
 
 
