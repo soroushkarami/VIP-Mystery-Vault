@@ -1,6 +1,7 @@
 from django import forms
 from .models import Store
 from .normalizer import persian_to_english_numbers, normalize_size
+from django.contrib.auth.models import User
 
 
 class UploadInventoryForm(forms.Form):
@@ -38,7 +39,7 @@ class CustomerRegistrationForm(forms.Form):
         widget=forms.Select(attrs={'class': 'form-select'})
     )
 
-    def clean_phone(self):
+    def clean_phone(self):    # runs automatically when form.is_valid() is called
         phone = self.cleaned_data['phone']
         phone = persian_to_english_numbers(phone)
         phone = ''.join([ch for ch in phone if ch.isdigit()])
@@ -72,6 +73,45 @@ class CustomerRegistrationForm(forms.Form):
 
         return phone
 
-    def clean_size(self):
+    def clean_size(self):    # runs automatically when form.is_valid() is called
         size = self.cleaned_data['size']
         return normalize_size(size)
+
+
+class UsernameChangeForm(forms.Form):
+    new_username = forms.CharField(
+        max_length=120,
+        label='New Username',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter new username'
+        })
+    )
+
+    confirm_username = forms.CharField(
+        max_length=120,
+        label='Confirm Username',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Re-enter new username'
+        })
+    )
+
+    def __init__(self, user, *args, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)   # Calls the parent class (forms.Form) to do its normal setup (ie creating the form):
+        # Creates the fields, Binds the data (post,get), Sets up validation (so form.is_valid works), Prepares 'cleaned_data'
+
+    def clean_new_username(self):   # runs automatically when form.is_valid() is called
+        new_useraname = self.cleaned_data['new_username']
+        if User.objects.filter(username=new_useraname).exclude(id=self.user.id).exists():
+            raise forms.ValidationError('Username already taken! Try something else please.')
+        return new_useraname
+
+    def clean(self):    # runs automatically when form.is_valid() is called
+        cleaned_data = super().clean()
+        new_username = cleaned_data.get('new_username')
+        confirm_username = cleaned_data.get('confirm_username')
+        if new_username and confirm_username and new_username != confirm_username:
+            raise forms.ValidationError('Usernames do not match! Re-enter the same username please')
+        return cleaned_data

@@ -11,7 +11,7 @@ from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from .models import Store, Product, Customer, DailyDeal
-from .forms import UploadInventoryForm, CustomerRegistrationForm
+from .forms import UploadInventoryForm, CustomerRegistrationForm, UsernameChangeForm
 from .normalizer import normalize_columns, persian_to_english_numbers, normalize_size
 from .utils import (get_top_deals,
                     is_in_cooldown,
@@ -249,6 +249,31 @@ def login_redirect(request):
         return redirect('/soroush_panel/')
     else:
         return redirect('/dashboard/')
+
+
+@login_required
+def change_username(request):
+    if request.method == 'POST':
+        form = UsernameChangeForm(request.user, request.POST)
+        if form.is_valid():
+            new_username = form.cleaned_data['new_username']
+            request.user.username = new_username
+            request.user.save()
+            messages.success(request,
+                             'Username updated successfully!')
+            return redirect('account_settings')
+    else:
+        form = UsernameChangeForm(request.user)
+
+    return render(request,
+                  'registration/username_change.html',
+                  {'form': form})
+
+
+@login_required
+def account_settings(request):
+    return render(request,
+                  'registration/account.html')
 
 
 @subscription_required      # defined in utils

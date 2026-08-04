@@ -12,7 +12,9 @@ from .views import (
     login_redirect,
     generate_qr,
     update_product,
-    view_skus
+    view_skus,
+    account_settings,
+    change_username
 )
 
 urlpatterns = [
@@ -21,6 +23,8 @@ urlpatterns = [
 
     path('upload-inventory/', UploadInventoryView.as_view(), name='upload_inventory'),
     path('login-redirect/', login_redirect, name='login_redirect'),
+    path('account/', account_settings, name='account_settings'),
+    path('account/username/', change_username, name='change_username'),
 
     # Dashboard URLs
     path('dashboard/', dashboard_home, name='dashboard_home'),
