@@ -10,6 +10,7 @@ class Store(models.Model):
     subscription_active = models.BooleanField(default=True)
     subscription_expiry = models.DateTimeField(null=True,   # The db is allowed to leave this cell EMPTY
                                                blank=True)  # The website form is allowed to leave this field EMPTY
+    logo = models.ImageField(upload_to='logos/', null=True, blank=True)
 
     # Link this store to a Django User; ensures each user can own only one store.
     user = models.OneToOneField(
@@ -30,7 +31,7 @@ class Store(models.Model):
             return 0
 
         remained = self.subscription_expiry - now
-        return remained
+        return remained.days
 
     @property
     def is_subscription_active(self):

@@ -14,7 +14,8 @@ from .views import (
     update_product,
     view_skus,
     account_settings,
-    change_username
+    change_username,
+    upload_logo
 )
 
 urlpatterns = [
@@ -25,6 +26,7 @@ urlpatterns = [
     path('login-redirect/', login_redirect, name='login_redirect'),
     path('account/', account_settings, name='account_settings'),
     path('account/username/', change_username, name='change_username'),
+    path('account/logo/', upload_logo, name='upload_logo'),
 
     # Dashboard URLs
     path('dashboard/', dashboard_home, name='dashboard_home'),

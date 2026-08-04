@@ -2,6 +2,8 @@ import random
 from django.utils import timezone
 from django.shortcuts import render, redirect
 from .models import DailyDeal, Product, Store
+from PIL import Image
+from io import BytesIO
 
 
 def get_top_deals(customer, store, top_k=3):
@@ -203,3 +205,39 @@ def subscription_required(view_funcs):          # takes a view function as input
         # 3. If all checks pass (logged in, subscription active) → Let them in!
         return view_funcs(request, *args, **kwargs)
     return wrapper
+
+
+def resize_image(image_file, max_size=800, quality=80):
+    """
+    Resize an image to max 800px width/height while maintaining aspect ratio.
+    Returns the resized image as a BytesIO object ready for Django's ImageField.
+    """
+    # Open the image
+    img = Image.open(image_file)
+    # Check if image needs resizing
+    width, height = img.size
+    if width <= max_size and height <= max_size:
+        # reset file pointer and return original
+        image_file.seek(0)
+        return image_file
+
+    # Calculate new size (maintain aspect ratio)
+    if width > height:
+        new_width = max_size
+        new_height = int(height * (max_size / width))
+    else:
+        new_height = max_size
+        new_width = int(width * (max_size / height))
+
+    # resize the img
+    img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+    # Save to BytesIO
+    output = BytesIO()
+    img.save(output,
+             format='JPEG' if img.mode == 'RGB' else 'PNG',
+             quality=quality,
+             optimize=True)
+    output.seek(0)
+
+    return output

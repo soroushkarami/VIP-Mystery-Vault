@@ -115,3 +115,17 @@ class UsernameChangeForm(forms.Form):
         if new_username and confirm_username and new_username != confirm_username:
             raise forms.ValidationError('Usernames do not match! Re-enter the same username please')
         return cleaned_data
+
+
+class StoreLogoForm(forms.ModelForm):   # A special form that is directly linked to a database model (Store in this case)
+    # ModelForm automatically reads the Store model, finds the logo field, and builds the form
+    # It checks file size, file type, and saves the file to the logo field
+    class Meta:     # instructions for how this form should behave
+        model = Store
+        fields = ['logo']   # Only include the logo field in this form
+        widgets = {     # Customize how the logo field looks in the HTML
+            'logo': forms.FileInput(attrs={     # forms.FileInput is the widget for file uploads
+                'class': 'form-control',
+                'accept': 'image/*'     # When the user clicks the file picker, only show image files
+            })
+        }

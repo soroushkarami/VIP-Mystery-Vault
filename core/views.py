@@ -11,58 +11,23 @@ from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from .models import Store, Product, Customer, DailyDeal
-from .forms import UploadInventoryForm, CustomerRegistrationForm, UsernameChangeForm
-from .normalizer import normalize_columns, persian_to_english_numbers, normalize_size
+from .forms import (UploadInventoryForm, CustomerRegistrationForm,
+                    UsernameChangeForm, StoreLogoForm)
+from .normalizer import (normalize_columns, persian_to_english_numbers,
+                         normalize_size)
 from .utils import (get_top_deals,
                     is_in_cooldown,
                     update_visit_and_cooldown,
                     get_special_offer,
                     generate_sku,
-                    subscription_required)
+                    subscription_required,
+                    resize_image)
 
-from PIL import Image
 import os
 import pandas as pd
 import zipfile
 import qrcode
-from io import BytesIO
 import json
-
-
-def resize_image(image_file, max_size=800, quality=80):
-    """
-    Resize an image to max 800px width/height while maintaining aspect ratio.
-    Returns the resized image as a BytesIO object ready for Django's ImageField.
-    """
-    # Open the image
-    img = Image.open(image_file)
-    # Check if image needs resizing
-    width, height = img.size
-    if width <= max_size and height <= max_size:
-        # reset file pointer and return original
-        image_file.seek(0)
-        return image_file
-
-    # Calculate new size (maintain aspect ratio)
-    if width > height:
-        new_width = max_size
-        new_height = int(height * (max_size / width))
-    else:
-        new_height = max_size
-        new_width = int(width * (max_size / height))
-
-    # resize the img
-    img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-
-    # Save to BytesIO
-    output = BytesIO()
-    img.save(output,
-             format='JPEG' if img.mode == 'RGB' else 'PNG',
-             quality=quality,
-             optimize=True)
-    output.seek(0)
-
-    return output
 
 
 class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in users(registered sellers) can access
@@ -272,8 +237,42 @@ def change_username(request):
 
 @login_required
 def account_settings(request):
+    try:
+        store = request.user.store
+    except Store.DoesNotExist:
+        store = None
+    return render(request, 'registration/account.html', {'store': store})
+
+
+@login_required
+def upload_logo(request):
+    try:
+        store = request.user.store
+    except Store.DoesNotExist:
+        messages.error(request, 'No store linked to your acount.')
+        return redirect('account_settings')
+
+    if request.method == 'POST':
+        form = StoreLogoForm(request.POST, request.FILES, instance=store)
+        if form.is_valid():
+            logo = request.FILES.get('logo')
+            if logo:
+                resized = resize_image(logo, max_size=400, quality=80)
+                store.logo.save(logo.name,
+                                ContentFile(resized.read()),
+                                save=True)
+                messages.success(request, 'Logo uploaded successfully!')
+            return redirect('account_settings')
+
+    else:
+        form = StoreLogoForm(instance=store)
+
     return render(request,
-                  'registration/account.html')
+                  'registration/upload_logo.html',
+                  {
+                      'form': form,
+                      'store': store
+                  })
 
 
 @subscription_required      # defined in utils

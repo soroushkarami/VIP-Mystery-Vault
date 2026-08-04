@@ -39,7 +39,23 @@
                 </div>
             </div>
         </div>
+        <!-- Upload Logo -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">📸 Upload Logo</h5>
+                    <p class="card-text">
+                        {% if store.logo %}
+                            ✅ Logo uploaded
+                        {% else %}
+                            No logo uploaded yet
+                        {% endif %}
+                    </p>
+                    <a href="{% url 'upload_logo' %}" class="btn btn-info">Upload Logo</a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
 </body>
 </html>
