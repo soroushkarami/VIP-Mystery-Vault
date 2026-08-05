@@ -407,6 +407,10 @@ def pending_deals(request):
     # Returns QuerySet of Deal objects
     # Passes the list of deals to the template
 
+    # Calculate discounted price for each deal
+    for deal in deals:
+        deal.discounted_price = int(deal.product.price * (100 - deal.discount_percent) / 100)
+
     return render(request,
                   'core/pending_deals.html',
                   {
@@ -437,19 +441,23 @@ def confirm_sold(request, deal_id):
             product.is_out_of_stock = True
         product.save()
 
-    # TODO 2. Mark ALL deals for this customer as claimed
-    # Get all pending deals for this customer (active and unclaimed)
+    # TODO 2. Mark ONLY THIS DEAL as claimed
+    deal.is_claimed = True
+    deal.is_bought = True
+    deal.save()
+
+    # TODO 3. Delete the OTHER pending deals for this customer
     customer = deal.customer
-    pending_deals = DailyDeal.objects.filter(
+    other_deals = DailyDeal.objects.filter(
         customer=customer,
         is_claimed=False,
         expires_at__gt=timezone.now()
-    )
+    ).exclude(id=deal.id)
 
-    # Mark ALL pending deals as claimed
-    count = pending_deals.update(is_claimed=True, is_bought=True)
+    count = other_deals.count()
+    other_deals.delete()
 
-    # TODO 3. Update customer style_tags (only for the purchased product)
+    # TODO 4. Update customer style_tags (only for the purchased product)
     customer.add_purchase(product)
 
     # Reset visit count after purchase
@@ -457,7 +465,7 @@ def confirm_sold(request, deal_id):
 
     messages.success(request,
                      f'✅ Deal confirmed! {product.name} sold to {customer.phone}. '
-                     f'({count} deals removed from pending list)')
+                     f'({count} deals removed)')
     return redirect('pending_deals')
 
 

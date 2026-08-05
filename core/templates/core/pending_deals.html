@@ -26,16 +26,41 @@
             {% for deal in deals %}
                 <div class="list-group-item">
                     <div class="row align-items-center">
-                        <div class="col-12 col-md-6">
+                        <div class="col-12 col-md-5">
+                            <!-- Customer & Product Info -->
                             <strong>{{ deal.customer.phone }}</strong><br>
-                            <span class="text-muted">{{ deal.product.name }}</span><br>
-                            <span class="badge bg-info">{{ deal.discount_percent }}% OFF</span>
-                            <small class="text-muted">Expires: {{ deal.expires_at|date:"H:i" }}</small>
+                            <span class="text-muted">{{ deal.product.name }}</span>
+                            <span class="badge bg-secondary">{{ deal.product.size }}</span>
+
+                            <!-- ✅ Revealed Status -->
+                            {% if deal.has_revealed %}
+                                <span class="badge bg-success ms-1">✅ انتخاب شده</span>
+                            {% else %}
+                                <span class="badge bg-secondary ms-1">⏳ انتخاب نشده</span>
+                            {% endif %}
                         </div>
-                        <div class="col-12 col-md-6 text-end mt-2 mt-md-0">
+                        <div class="col-6 col-md-2">
+                            <!-- Original Price -->
+                            <small class="text-muted">قیمت اصلی</small><br>
+                            <strong>{{ deal.product.price }} تومان</strong>
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <!-- Discount -->
+                            <span class="badge bg-info">{{ deal.discount_percent }}%</span><br>
+                            <small class="text-muted">تخفیف</small>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <!-- ✅ Final Price -->
+                            <small class="text-muted">قیمت نهایی</small><br>
+                            <strong class="text-success">{{ deal.discounted_price }} تومان</strong>
+                        </div>
+                        <div class="col-12 col-md-12 mt-2 text-end">
                             <form method="post" action="{% url 'confirm_sold' deal.id %}" class="d-inline">
                                 {% csrf_token %}
-                                <button type="submit" class="btn btn-success btn-sm">✅ Confirm Sold</button>
+                                <button type="submit" class="btn btn-sm {% if deal.has_revealed %}btn-success{% else %}btn-secondary{% endif %}"
+                                    {% if not deal.has_revealed %}disabled{% endif %}>
+                                    ✅ Confirm Sold
+                                </button>
                             </form>
 
                             <form method="post" action="{% url 'toggle_out_of_stock' deal.product.id %}" class="d-inline">
