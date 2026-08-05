@@ -177,8 +177,8 @@ class Receipt(models.Model):
     def generate_receipt_number(cls):
         year = timezone.now().year
         last_receipt = cls.objects.filter(
-            created_at__year=year
-        ).order_by('-created_at').first()
+            issued_at__year=year
+        ).order_by('-issued_at').first()
 
         if last_receipt:
             # Extract the number

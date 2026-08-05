@@ -1,7 +1,7 @@
 from django.contrib import admin, messages
 from .models import Store, Product, Customer, DailyDeal, Receipt
 from django.shortcuts import redirect, render
-from django.urls import path
+from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.html import format_html
 
@@ -12,6 +12,24 @@ class StoreAdmin(admin.ModelAdmin):
                     'is_demo', 'receipt_link')
     list_filter = ('subscription_active', 'is_demo')
     search_fields = ('name', 'user__username')
+
+    # custom button for generation
+    readonly_fields = ('generate_receipt_button',)
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'markup_percent', 'user', 'logo',
+                       'subscription_active', 'subscription_expiry',
+                       'is_demo', 'generate_receipt_button')  # <-- add here
+        }),
+    )
+
+    def generate_receipt_button(self, obj):
+        url = reverse('admin:generate_receipt', args=[obj.id])
+        return format_html(
+            '<a class="button" href="{}" style="background: #28a745; color: white; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-weight: bold;">🧾 Generate Receipt</a>',
+            url
+        )
+    generate_receipt_button.short_description = ''
 
     def get_urls(self):
         urls = super().get_urls()
@@ -62,6 +80,7 @@ class StoreAdmin(admin.ModelAdmin):
     def receipt_link(self, obj):
         if obj.receipts.exists():
             last_receipt = obj.receipts.first()
+            url = reverse('admin:view_receipt', args=[last_receipt.id])
             return format_html(
                 '<a href="/soroush_panel/core/receipt/{}/view/">🧾 View Last</a>',
                 last_receipt.id
@@ -90,6 +109,13 @@ class ReceiptAdmin(admin.ModelAdmin):
     list_filter = ('payment_method', 'is_paid')
     search_fields = ('receipt_number', 'store__name', 'store__user__username')
 
+    # ── Make receipt_number read‑only ──
+    readonly_fields = ('receipt_number',)
+
+    # ── Optional: Disable manual "Add Receipt" entirely ──
+    #def has_add_permission(self, request):
+    #    return False
+
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
@@ -99,8 +125,4 @@ class ReceiptAdmin(admin.ModelAdmin):
 
     def view_receipt(self, request, receipt_id):
         receipt = Receipt.objects.get(id=receipt_id)
-        return render(request,
-                      'admin/view_receipt.html',
-                      {
-                          'receipt': receipt
-                      })
+        return render(request, 'admin/view_receipt.html', {'receipt': receipt})
