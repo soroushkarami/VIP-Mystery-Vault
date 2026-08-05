@@ -1,21 +1,14 @@
 from django.urls import path
 from django.views.generic import RedirectView
 from .views import (
-    UploadInventoryView,
-    dashboard_home,
-    pending_deals,
-    confirm_sold,
-    toggle_out_of_stock,
-    product_list,
-    scan_qr,
-    reveal_discount,
-    login_redirect,
-    generate_qr,
-    update_product,
-    view_skus,
-    account_settings,
-    change_username,
-    upload_logo
+    UploadInventoryView, dashboard_home,
+    pending_deals, confirm_sold,
+    toggle_out_of_stock, product_list,
+    scan_qr, reveal_discount,
+    login_redirect, generate_qr,
+    update_product, view_skus,
+    account_settings, change_username,
+    upload_logo, demo_dashboard
 )
 
 urlpatterns = [
@@ -27,6 +20,9 @@ urlpatterns = [
     path('account/', account_settings, name='account_settings'),
     path('account/username/', change_username, name='change_username'),
     path('account/logo/', upload_logo, name='upload_logo'),
+
+    # DEMO
+    path('demo/dashboard/', demo_dashboard, name='demo_dashboard'),
 
     # Dashboard URLs
     path('dashboard/', dashboard_home, name='dashboard_home'),

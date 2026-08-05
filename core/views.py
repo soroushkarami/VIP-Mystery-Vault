@@ -345,6 +345,30 @@ def dashboard_home(request):
                   })
 
 
+@login_required
+def demo_dashboard(request):
+    """Static demo dashboard – shows how the seller panel works"""
+    # get the demo store (id=3)
+    demo_store = Store.objects.filter(is_demo=True).first()
+    if not demo_store:
+        return redirect('home')     # home is login page (core/urls)
+
+    demo_deals = DailyDeal.objects.filter(
+        customer__store=demo_store,
+        is_claimed=False,
+        expires_at__gt=timezone.now()
+    ).select_related('customer', 'product')[:5]
+
+    return render(request,
+                  'core/demo_dashboard.html',
+                  {
+                      'store': demo_store,
+                      'deals': demo_deals,
+                      'is_demo': True,
+                      'pending_deals': demo_deals.count()
+                  })
+
+
 # ---------- PENDING DEALS LIST ----------
 @subscription_required
 @login_required
@@ -647,6 +671,9 @@ def scan_qr(request, store_id=None):
                       'core/error.html',
                       {'error': 'Store not found.'})
 
+    # Demo store LOCK
+    is_demo = store.is_demo if store else False  # allow demo access but add demo banner in deals html
+
     # check if customer is identified by his/her browser's session (cookie)
     customer = None
     customer_id = request.session.get('customer_id', None)
@@ -847,7 +874,8 @@ def scan_qr(request, store_id=None):
                       'customer': customer,
                       'store': store,
                       'deals': deals,
-                      'notification': notification
+                      'notification': notification,
+                      'is_demo': is_demo
                   })
 
 
@@ -880,6 +908,19 @@ def reveal_discount(request, deal_id):
     if deal.is_expired():
         return JsonResponse({'error': 'Sorry, this deal is expired.'},
                             status=410)
+
+    #  Check if any deal for this customer has already been revealed
+    if DailyDeal.objects.filter(
+        customer_id=customer_id,
+        is_claimed=False,
+        has_revealed=True
+    ).exists():
+        return JsonResponse({'error': 'You have already revealed a deal. You can only choose that one.'},
+                            status=403)
+
+    # Mark current deal as revealed
+    deal.has_revealed = True
+    deal.save()
 
     # return the discount
     discounted_price = deal.product.price * (100 - deal.discount_percent) / 100

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Demo Dashboard – Mystery Deal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        .demo-badge { background: #ffc107; color: #000; padding: 5px 15px; border-radius: 20px; }
+        .btn-demo { cursor: default; opacity: 0.7; }
+    </style>
+</head>
+<body>
+<div class="container mt-4">
+    <!-- Demo Banner -->
+    <div class="alert alert-warning text-center">
+        🔹 <strong>نسخه نمایشی</strong><br>
+        این صفحه فقط برای آشنایی با پنل فروشنده طراحی شده است.<br>
+        دکمه‌ها غیرفعال هستند و هیچ داده‌ای ذخیره نمی‌شود.
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1>🏪 {{ store.name }}</h1>
+            <span class="badge demo-badge">نسخه نمایشی</span>
+        </div>
+        <a href="{% url 'scan_qr' store_id=store.id %}" class="btn btn-outline-secondary">← بازگشت به مشتری</a>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12 col-md-6">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h2 class="display-4">{{ pending_deals }}</h2>
+                    <p class="card-text">درخواست‌های تخفیف</p>
+                    <button class="btn btn-primary btn-demo" disabled>مشاهده درخواست‌ها</button>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h2 class="display-4">{{ store.markup_percent }}%</h2>
+                    <p class="card-text">سود فروشگاه</p>
+                    <button class="btn btn-secondary btn-demo" disabled>مدیریت محصولات</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Deals List -->
+    <div class="mt-4">
+        <h4>🕐 درخواست‌های تخفیف</h4>
+        {% if deals %}
+            <div class="list-group">
+                {% for deal in deals %}
+                    <div class="list-group-item">
+                        <div class="row align-items-center">
+                            <div class="col-12 col-md-6">
+                                <strong>{{ deal.customer.phone }}</strong><br>
+                                <span class="text-muted">{{ deal.product.name }}</span><br>
+                                <span class="badge bg-info">{{ deal.discount_percent }}% تخفیف</span>
+                            </div>
+                            <div class="col-12 col-md-6 text-end">
+                                <button class="btn btn-success btn-sm btn-demo" disabled>✅ تأیید فروش</button>
+                                <button class="btn btn-warning btn-sm btn-demo" disabled>📦 ناموجود</button>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-info">🎉 هیچ درخواستی وجود ندارد.</div>
+        {% endif %}
+    </div>
+
+    <div class="text-center mt-4">
+        <p class="text-muted small">
+            این یک نسخه نمایشی است. برای راه‌اندازی فروشگاه خود، با ما تماس بگیرید: [Your Phone Number]
+        </p>
+    </div>
+</div>
+</body>
+</html>

@@ -34,6 +34,14 @@
 </head>
 <body>
 <div class="container mt-4">
+    <!-- demo banner -->
+    {% if is_demo %}
+        <div class="alert alert-info text-center mb-3" role="alert">
+            🔹 <strong>این یک نسخه آزمایشی است</strong><br>
+            شما در حال تجربه سیستم Mystery Deal هستید.<br>
+            برای راه‌اندازی فروشگاه خود، با ما تماس بگیرید: [Your Phone Number]
+        </div>
+    {% endif %}
 
     {% if notification %}
     <div class="alert alert-info alert-dismissible fade show" role="alert">
@@ -80,6 +88,17 @@
     <div class="text-center mt-4">
         <p class="text-muted">هر کدام را انتخاب کنید و در فروشگاه به فروشنده نشان دهید.</p>
     </div>
+
+    <!-- ✅ DEMO BUTTON -->
+    {% if is_demo %}
+        <div class="text-center mt-4">
+            <a href="{% url 'demo_dashboard' %}" class="btn btn-outline-primary">
+                🖥️ مشاهده پنل فروشنده (نمایشی)
+            </a>
+            <p class="text-muted small mt-1">مشاهده نحوه مدیریت آفرها توسط فروشنده</p>
+        </div>
+    {% endif %}
+
 </div>
 
 <script>

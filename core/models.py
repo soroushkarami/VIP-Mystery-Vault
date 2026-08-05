@@ -21,6 +21,8 @@ class Store(models.Model):
         related_name='store'    # This lets us do: request.user.store
     )
 
+    is_demo = models.BooleanField(default=False)
+
     @property
     def days_remaining(self):
         """Return days remaining until subscription expiry, or None if no expiry date."""
@@ -126,6 +128,7 @@ class DailyDeal(models.Model):
     expires_at = models.DateTimeField()
     is_claimed = models.BooleanField(default=False)     # if seller confirmed sold
     is_bought = models.BooleanField(default=False)    # if customer actually bought
+    has_revealed = models.BooleanField(default=False)   # to make sure customer can only select 1 one of the deals
 
     def __str__(self):
         return f'Deal for {self.customer.phone} - {self.product.name} : {self.discount_percent}%'
