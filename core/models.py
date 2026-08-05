@@ -145,3 +145,51 @@ class DailyDeal(models.Model):
             discount_percent=discount,
             expires_at=expiration
         )
+
+
+class Receipt(models.Model):
+    store = models.ForeignKey(Store,
+                              on_delete=models.CASCADE,
+                              related_name='receipts')
+    receipt_number = models.CharField(max_length=30, unique=True)
+    amount = models.PositiveIntegerField()
+    payment_method = models.CharField(max_length=50, choices=[
+        ('cash', 'پول نقد'),
+        ('bank', 'انتقال بانکی'),
+        ('card', 'کارت به کارت'),
+        ('online', 'پرداخت آنلاین')
+    ], default='card')
+    subscription_start = models.DateTimeField()
+    subscription_end = models.DateTimeField()
+    issued_at = models.DateTimeField(auto_now_add=True)
+    issued_by = models.ForeignKey('auth.User',
+                                  on_delete=models.SET_NULL,
+                                  null=True)
+    is_paid = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['-issued_at']
+
+    def __str__(self):
+        return f'{self.receipt_number} - {self.store.name}'
+
+    @classmethod
+    def generate_receipt_number(cls):
+        year = timezone.now().year
+        last_receipt = cls.objects.filter(
+            created_at__year=year
+        ).order_by('-created_at').first()
+
+        if last_receipt:
+            # Extract the number
+            parts = last_receipt.receipt_number.split('-')
+            if len(parts) == 3:
+                try:
+                    num = int(parts[2]) + 1
+                except:
+                    num = 1
+            else:
+                num = 1
+        else:
+            num = 1
+        return f'INV-{year}-{str(num).zfill(3)}'

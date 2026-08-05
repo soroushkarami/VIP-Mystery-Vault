@@ -1,0 +1,244 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{# ── Set page title – used as print filename ── #}
+{% block title %}{{ receipt.receipt_number }}-Store{{ receipt.store.id }}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    /* ── Receipt Container ── */
+    .receipt-wrapper {
+        max-width: 700px;
+        margin: 2rem auto;
+        padding: 0 15px;
+    }
+    .receipt-card {
+        background: #ffffff;
+        border-radius: 16px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        padding: 2.5rem 2.5rem 2rem;
+        border: 1px solid #e9ecef;
+        transition: all 0.2s;
+    }
+
+    /* ── Header ── */
+    .receipt-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 2px solid #f1f3f5;
+        padding-bottom: 1.2rem;
+        margin-bottom: 1.8rem;
+        flex-wrap: wrap;
+    }
+    .receipt-brand h2 {
+        margin: 0;
+        font-weight: 700;
+        font-size: 1.8rem;
+        color: #1a1a2e;
+        letter-spacing: -0.5px;
+    }
+    .receipt-brand small {
+        color: #6c757d;
+        font-size: 0.85rem;
+        display: block;
+        margin-top: -2px;
+    }
+    .receipt-status {
+        background: #d4edda;
+        color: #155724;
+        padding: 0.3rem 1rem;
+        border-radius: 30px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        border: 1px solid #c3e6cb;
+    }
+
+    /* ── Info Grid ── */
+    .receipt-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.2rem 2rem;
+        margin-bottom: 1.8rem;
+    }
+    .receipt-grid .item {
+        display: flex;
+        flex-direction: column;
+    }
+    .receipt-grid .label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #868e96;
+        font-weight: 600;
+    }
+    .receipt-grid .value {
+        font-size: 1rem;
+        font-weight: 500;
+        color: #212529;
+        margin-top: 2px;
+    }
+    .receipt-grid .value strong {
+        font-weight: 700;
+    }
+
+    /* ── Section Titles ── */
+    .receipt-section-title {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #495057;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid #dee2e6;
+        padding-bottom: 0.5rem;
+        margin: 1.8rem 0 1rem;
+    }
+
+    /* ── Total Amount ── */
+    .receipt-total {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 1.2rem 1.8rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 1.5rem 0 1rem;
+        border-left: 6px solid #28a745;
+    }
+    .receipt-total .label {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #343a40;
+    }
+    .receipt-total .amount {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #28a745;
+        letter-spacing: 0.5px;
+    }
+
+    /* ── Footer ── */
+    .receipt-footer {
+        text-align: center;
+        color: #adb5bd;
+        font-size: 0.8rem;
+        border-top: 1px solid #f1f3f5;
+        padding-top: 1.5rem;
+        margin-top: 1.5rem;
+    }
+    .receipt-footer p {
+        margin: 0;
+    }
+
+    /* ── Print Styles ── */
+    @media print {
+        body { background: #fff !important; }
+        .receipt-wrapper { max-width: 100%; margin: 0; padding: 0; }
+        .receipt-card {
+            border: none !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            padding: 1.5rem !important;
+        }
+        .breadcrumbs, #user-tools, .navbar, .btn, .actions { display: none !important; }
+        .receipt-status { background: #d4edda !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .receipt-total { background: #f8f9fa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 576px) {
+        .receipt-card { padding: 1.5rem; }
+        .receipt-grid { grid-template-columns: 1fr; gap: 0.8rem; }
+        .receipt-header { flex-direction: column; align-items: flex-start; }
+        .receipt-status { margin-top: 10px; }
+        .receipt-total { flex-direction: column; align-items: stretch; text-align: center; }
+        .receipt-total .amount { margin-top: 5px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="receipt-wrapper">
+    <div class="receipt-card" id="receipt">
+
+        <!-- HEADER -->
+        <div class="receipt-header">
+            <div class="receipt-brand">
+                <h2>🧾 Mystery Deal</h2>
+                <small>Official Payment Receipt</small>
+            </div>
+            <div class="receipt-status">✅ Paid</div>
+        </div>
+
+        <!-- RECEIPT INFO -->
+        <div class="receipt-grid">
+            <div class="item">
+                <span class="label">Receipt #</span>
+                <span class="value"><strong>{{ receipt.receipt_number }}</strong></span>
+            </div>
+            <div class="item">
+                <span class="label">Date</span>
+                <span class="value">{{ receipt.issued_at|date:"Y/m/d H:i" }}</span>
+            </div>
+            <div class="item">
+                <span class="label">Issued By</span>
+                <span class="value">{{ receipt.issued_by.username|default:"System" }}</span>
+            </div>
+            <div class="item">
+                <span class="label">Payment Method</span>
+                <span class="value">{{ receipt.get_payment_method_display }}</span>
+            </div>
+        </div>
+
+        <!-- STORE DETAILS -->
+        <div class="receipt-section-title">🏪 Store Information</div>
+        <div class="receipt-grid">
+            <div class="item">
+                <span class="label">Store Name</span>
+                <span class="value">{{ receipt.store.name }}</span>
+            </div>
+            <div class="item">
+                <span class="label">Owner</span>
+                <span class="value">{{ receipt.store.user.username|default:"—" }}</span>
+            </div>
+        </div>
+
+        <!-- SUBSCRIPTION -->
+        <div class="receipt-section-title">📅 Subscription Period</div>
+        <div class="receipt-grid">
+            <div class="item">
+                <span class="label">Start</span>
+                <span class="value">{{ receipt.subscription_start|date:"Y/m/d" }}</span>
+            </div>
+            <div class="item">
+                <span class="label">End</span>
+                <span class="value">{{ receipt.subscription_end|date:"Y/m/d" }}</span>
+            </div>
+        </div>
+
+        <!-- TOTAL AMOUNT -->
+        <div class="receipt-total">
+            <span class="label">Total Amount</span>
+            <span class="amount">{{ receipt.amount|floatformat:0 }} Toman</span>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="receipt-footer">
+            <p>Thank you for choosing Mystery Deal!</p>
+            <p style="font-size: 0.75rem; color: #adb5bd;">For support, contact: 09044049514</p>
+        </div>
+
+    </div>
+
+    <!-- Action Buttons (hidden when printing) -->
+    <div class="text-center mt-4 no-print">
+        <button onclick="window.print()" class="btn btn-primary" style="margin-right: 10px;">
+            🖨️ Print Receipt
+        </button>
+        <a href="{% url 'admin:core_store_changelist' %}" class="btn btn-secondary">
+            ← Back to Stores
+        </a>
+    </div>
+</div>
+{% endblock %}

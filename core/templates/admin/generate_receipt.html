@@ -1,0 +1,40 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>🧾 Generate Receipt for {{ store.name }}</h1>
+    <p class="text-muted">Create an official receipt for this store's subscription payment.</p>
+    
+    <div class="card">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    <label class="form-label">Amount (Tomans)</label>
+                    <input type="number" name="amount" class="form-control" placeholder="e.g., 800000" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Payment Method</label>
+                    <select name="payment_method" class="form-select">
+                        <option value="cash">پول نقد</option>
+                        <option value="bank">انتقال بانکی</option>
+                        <option value="card">کارت به کارت</option>
+                        <option value="online">پرداخت آنلاین</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Subscription Days</label>
+                    <input type="number" name="subscription_days" class="form-control" value="30" required>
+                    <small class="text-muted">Number of days the subscription will be extended.</small>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Generate Receipt</button>
+                <a href="{% url 'admin:core_store_change' store.id %}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
