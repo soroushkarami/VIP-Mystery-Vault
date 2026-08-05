@@ -685,6 +685,41 @@ def generate_qr(request):
     return response
 
 
+@subscription_required
+@login_required
+def sales_detail(request):
+    try:
+        store = request.user.store
+    except Store.DoesNotExist:
+        return redirect('dashboard_home')
+
+    # Get the start of the current month
+    now = timezone.now()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    # Get all claimed deals (sales) for this store in the current month
+    sales = DailyDeal.objects.filter(
+        customer__store=store,
+        is_claimed=True,
+        created_at__gte=month_start
+    ).select_related('customer', 'product').order_by('-created_at')
+
+    # Calculate discounted price for each sale
+    for sale in sales:
+        sale.discounted_price = int(sale.product.price * (100 - sale.discount_percent) / 100)
+
+    # Summary stats
+    total_sales = sales.count()
+    total_revenue = sum(s.discounted_price for s in sales)
+
+    return render(request, 'core/sales_detail.html', {
+        'store': store,
+        'sales': sales,
+        'total_sales': total_sales,
+        'total_revenue': total_revenue,
+        'month_name': now.strftime('%B %Y'),
+    })
+
 # Customer Experience
 # ---------- QR SCAN ----------
 def scan_qr(request, store_id=None):

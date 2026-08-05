@@ -45,29 +45,40 @@
 
     <!-- Stats Row -->
     <div class="row g-3 mb-4">
-        <div class="col-12 col-sm-4">
-            <div class="card text-center border-primary">
+        <div class="col-6 col-sm-3">
+            <div class="card text-center border-primary h-100">
                 <div class="card-body">
                     <h2 class="display-6">{{ total_customers }}</h2>
                     <p class="card-text text-muted">👤 مشتریان این ماه</p>
                 </div>
             </div>
         </div>
-        <div class="col-12 col-sm-4">
-            <div class="card text-center border-success">
+        <div class="col-6 col-sm-3">
+            <div class="card text-center border-success h-100">
                 <div class="card-body">
                     <h2 class="display-6">{{ total_sales }}</h2>
                     <p class="card-text text-muted">💰 فروش این ماه</p>
                 </div>
             </div>
         </div>
-        <div class="col-12 col-sm-4">
-            <div class="card text-center border-warning">
+        <div class="col-6 col-sm-3">
+            <div class="card text-center border-warning h-100">
                 <div class="card-body">
                     <h2 class="display-6">{{ conversion }}%</h2>
                     <p class="card-text text-muted">📈 نرخ تبدیل</p>
                 </div>
             </div>
+        </div>
+        <!-- Sales Detail Link -->
+        <div class="col-6 col-sm-3">
+            <a href="{% url 'sales_detail' %}" class="text-decoration-none">
+                <div class="card text-center border-info h-100" style="cursor: pointer;">
+                    <div class="card-body">
+                        <h2 class="display-6">📊</h2>
+                        <p class="card-text text-muted">آمار فروش</p>
+                    </div>
+                </div>
+            </a>
         </div>
     </div>
 

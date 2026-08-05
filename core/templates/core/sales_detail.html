@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sales Detail – Mystery Deal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1>💰 Sales Report</h1>
+            <p class="text-muted">{{ month_name }}</p>
+        </div>
+        <a href="{% url 'dashboard_home' %}" class="btn btn-outline-secondary">← Back to Dashboard</a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-4">
+            <div class="card text-center bg-light">
+                <div class="card-body">
+                    <h3>{{ total_sales }}</h3>
+                    <p class="card-text text-muted">تعداد فروش</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="card text-center bg-light">
+                <div class="card-body">
+                    <h3>{{ total_revenue|floatformat:0 }}</h3>
+                    <p class="card-text text-muted">کل درآمد</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="card text-center bg-light">
+                <div class="card-body">
+                    <h3>{{ sales.count }}</h3>
+                    <p class="card-text text-muted">تعداد مشتریان</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sales Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">📋 جزئیات فروش</h5>
+        </div>
+        <div class="card-body p-0">
+            {% if sales %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>تاریخ</th>
+                                <th>مشتری</th>
+                                <th>محصول</th>
+                                <th>سایز</th>
+                                <th>قیمت اصلی</th>
+                                <th>تخفیف</th>
+                                <th>قیمت نهایی</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sale in sales %}
+                                <tr>
+                                    <td>{{ sale.created_at|date:"Y/m/d H:i" }}</td>
+                                    <td><strong>{{ sale.customer.phone }}</strong></td>
+                                    <td>{{ sale.product.name }}</td>
+                                    <td>{{ sale.product.size }}</td>
+                                    <td>{{ sale.product.price }} تومان</td>
+                                    <td><span class="badge bg-info">{{ sale.discount_percent }}%</span></td>
+                                    <td><strong class="text-success">{{ sale.discounted_price }} تومان</strong></td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center p-4">
+                    <p class="text-muted">هیچ فروشی در این ماه ثبت نشده است.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+</body>
+</html>
