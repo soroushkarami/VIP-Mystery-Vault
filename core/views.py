@@ -353,11 +353,31 @@ def demo_dashboard(request):
     if not demo_store:
         return redirect('home')     # home is login page (core/urls)
 
+    # Get the current customer from session (so that the deals are shown for each seller separately)
+    customer_id = request.session.get('customer_id', None)
+    customer = None
+    if customer_id:
+        try:
+            customer = Customer.objects.get(id=customer_id, store=demo_store)
+        except Customer.DoesNotExist:
+            pass
+
+    # Filter deals by this specific customer (if exists)
     demo_deals = DailyDeal.objects.filter(
         customer__store=demo_store,
         is_claimed=False,
         expires_at__gt=timezone.now()
-    ).select_related('customer', 'product')[:5]
+    )
+
+    # If we have a customer, only show their deals
+    if customer:
+        demo_deals = demo_deals.filter(customer=customer)
+        pending_count = demo_deals.count()
+    else:
+        demo_deals = demo_deals.none()
+        pending_count = 0
+
+    demo_deals = demo_deals.select_related('customer', 'product')[:5]
 
     return render(request,
                   'core/demo_dashboard.html',
@@ -365,7 +385,8 @@ def demo_dashboard(request):
                       'store': demo_store,
                       'deals': demo_deals,
                       'is_demo': True,
-                      'pending_deals': demo_deals.count()
+                      'pending_deals': pending_count,
+                      'customer_phone': customer.phone if customer else None
                   })
 
 
@@ -784,6 +805,14 @@ def scan_qr(request, store_id=None):
         customer.notification_message = None  # Clear after reading
         customer.save()
 
+    # for DEMO: reset all restrictions
+    if is_demo and customer:
+        customer.cooldown_until = None
+        customer.visit_count = 0
+        customer.shadow_banned = False
+        customer.special_offer_used = False
+        customer.save()
+
     # 🛡️ PSYCHOLOGICAL TRAP: Check if customer is shadow banned
     if customer.shadow_banned:
         # Show fake deals page (no discounts, no reveal)
@@ -792,8 +821,8 @@ def scan_qr(request, store_id=None):
             'store': store,
         })
 
-    # customer already exists --> check cooldown
-    if is_in_cooldown(customer):
+    # customer already exists --> CHECK COOLDOWN
+    if is_in_cooldown(customer) and not is_demo:
         return render(request,
                       'core/cooldown.html',
                       {
@@ -801,22 +830,28 @@ def scan_qr(request, store_id=None):
                           'cooldown_until': customer.cooldown_until
                       })
 
-    # update visit count
-    cooldown_triggered = update_visit_and_cooldown(customer, made_purchase=False)
-    if cooldown_triggered:
-        return render(request,
-                      'core/cooldown.html',
-                      {
-                          'customer': customer,
-                          'cooldown_until': customer.cooldown_until,
-                          'message': 'You have visited 3 times without purchasing. Take a week off, then come back for a special deal.!'
-                      })
-
-    # Check if customer has just come out of cooldown and hasn't received the Special Offer yet
-    if (not customer.special_offer_used) and customer.cooldown_until and customer.cooldown_until < timezone.now():
-        # Clear the cooldown flag
+    # UPDATE VISIT COUNT
+    if not is_demo:
+        cooldown_triggered = update_visit_and_cooldown(customer, made_purchase=False)
+        if cooldown_triggered:
+            return render(request,
+                          'core/cooldown.html',
+                          {
+                              'customer': customer,
+                              'cooldown_until': customer.cooldown_until,
+                              'message': 'You have visited 3 times without purchasing. Take a week off, then come back for a special deal.!'
+                          })
+    else:
         customer.cooldown_until = None
         customer.save()
+
+    # SPECIAL OFFER
+    # Check if customer hasn't received the Special Offer yet (demo OR cooldown ended)
+    if not is_demo:
+        if (not customer.special_offer_used) and (customer.cooldown_until and customer.cooldown_until < timezone.now()):
+            # Clear the cooldown flag
+            customer.cooldown_until = None
+            customer.save()
 
         # Generate Special Offer: 1 item at 30% off
         special_deal = get_special_offer(customer, store)
@@ -840,8 +875,8 @@ def scan_qr(request, store_id=None):
         # show existing deals since they're still valid
         deals = existing_deals
     else:
-        # Check 24h limit
-        if customer.last_deal_generated and (
+        # Check 24h limit (skip for DEMO)
+        if not is_demo and customer.last_deal_generated and (
                 customer.last_deal_generated > timezone.now() - timezone.timedelta(hours=24)):
             # Customer got deals in the last 24 hours --> Show waiting page
             next_available = customer.last_deal_generated + timezone.timedelta(hours=24)
@@ -868,6 +903,24 @@ def scan_qr(request, store_id=None):
         customer.last_deal_generated = timezone.now()
         customer.save()
 
+    # Check if any deal for this customer has already been revealed (to keep it revealed even after refreshing)
+    has_revealed = DailyDeal.objects.filter(
+        customer=customer,
+        is_claimed=False,
+        has_revealed=True
+    ).exists()
+
+    revealed_deal = DailyDeal.objects.filter(
+        customer=customer,
+        is_claimed=False,
+        has_revealed=True
+    ).first()
+
+    revealed_deal_id = revealed_deal.id if revealed_deal else None
+
+    for deal in deals:      # we pass it directly to the HTML so that after refresh the discount is shown without using AJAX again
+        deal.discounted_price = int(deal.product.price * (100 - deal.discount_percent) / 100)
+
     return render(request,
                   'core/deals.html',
                   {
@@ -875,7 +928,9 @@ def scan_qr(request, store_id=None):
                       'store': store,
                       'deals': deals,
                       'notification': notification,
-                      'is_demo': is_demo
+                      'is_demo': is_demo,
+                      'has_revealed': has_revealed,
+                      'revealed_deal_id': revealed_deal_id
                   })
 
 

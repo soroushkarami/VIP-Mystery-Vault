@@ -39,7 +39,7 @@
         <div class="alert alert-info text-center mb-3" role="alert">
             🔹 <strong>این یک نسخه آزمایشی است</strong><br>
             شما در حال تجربه سیستم Mystery Deal هستید.<br>
-            برای راه‌اندازی فروشگاه خود، با ما تماس بگیرید: [Your Phone Number]
+            برای راه‌اندازی فروشگاه خود، با ما تماس بگیرید: 09044049514
         </div>
     {% endif %}
 
@@ -56,7 +56,7 @@
     <div class="row g-3">
         {% for deal in deals %}
             <div class="col-12 col-md-4">
-                <div class="card deal-card shadow" data-deal-id="{{ deal.id }}">
+                <div class="card deal-card shadow" data-deal-id="{{ deal.id }}" data-discounted-price="{{ deal.discounted_price }}">
                     <div class="card-body text-center">
                         {% if deal.product.has_image %}
                             <img src="{{ deal.product.image.url }}" class="img-fluid rounded" style="max-height: 150px; width: auto; margin: 0 auto;">
@@ -103,6 +103,36 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // ==== RESTORE REVEALED STATE ON PAGE LOAD ====
+    const hasRevealed = {{ has_revealed|yesno:"true,false" }};
+    const revealedDealId = {{ revealed_deal_id|default:"null" }};
+    const cards = document.querySelectorAll('.deal-card');
+
+    // ✅ If a deal was already revealed, show it and lock all cards
+    if (hasRevealed && revealedDealId) {
+        // Show the revealed deal
+        const revealDiv = document.getElementById('reveal-' + revealedDealId);
+        if (revealDiv) {
+            revealDiv.classList.add('show');
+
+            // Restore the discounted price
+            const card = document.querySelector(`.deal-card[data-deal-id="${revealedDealId}"]`);
+            if (card) {
+                const discountedPrice = card.dataset.discountedPrice;
+                if (discountedPrice) {
+                    document.getElementById('discounted-' + revealedDealId).textContent = discountedPrice;
+                }
+            }
+
+            // Lock all other cards
+            cards.forEach(c => {
+                if (parseInt(c.dataset.dealId) !== revealedDealId) {
+                    c.classList.add('locked');
+                }
+            });
+        }
+    }
+
     // ==== Countdown Timer ====
     const timers = document.querySelectorAll('.expiry-timer');
 
@@ -138,15 +168,15 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(updateTimers, 60000);
 
     // ==== Card click / Reveal ====
-    const cards = document.querySelectorAll('.deal-card');
-    let hasRevealed = false;
+    let hasRevealedLocal = hasRevealed;  // Use server state as initial value
 
     cards.forEach(card => {
         card.addEventListener('click', function() {
-            const dealId = this.dataset.dealId;
+            const dealId = parseInt(this.dataset.dealId);
             const revealDiv = document.getElementById('reveal-' + dealId);
 
-            if (revealDiv.classList.contains('show') || hasRevealed) {
+            // If already revealed OR another deal was revealed, do nothing
+            if (revealDiv.classList.contains('show') || hasRevealedLocal) {
                 return;
             }
 
@@ -170,9 +200,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 revealDiv.classList.add('show');
                 this.style.opacity = '1';
 
-                hasRevealed = true;
+                hasRevealedLocal = true;
                 cards.forEach(c => {
-                    if (c !== this) {
+                    const cId = parseInt(c.dataset.dealId);
+                    if (cId !== dealId) {
                         c.classList.add('locked');
                     }
                 });
