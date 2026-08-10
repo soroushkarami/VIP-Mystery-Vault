@@ -1,16 +1,15 @@
 {
   "disks": [
     {
-      "name": "Media",
+      "name": "media",
       "mountTo": "/app/media"
     }
   ],
-  "cron": [
-    {
-      "name": "deactivate-expired-stores",
-      "schedule": "0 */12 * * *",
-      "command": "python manage.py deactivate_expired_stores"
-    }
-  ],
-  "app": "vip-mysteryvault"
+  "app": "vip-mysteryvault",
+  "build": {
+    "predeploy": "pip install -r requirements.txt && python manage.py migrate && python manage.py collectstatic --noinput"
+  },
+  "run": {
+    "web": "gunicorn mysterydeal.wsgi:application"
+  }
 }
