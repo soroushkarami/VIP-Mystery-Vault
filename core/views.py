@@ -787,7 +787,7 @@ def scan_qr(request, store_id=None):
 
         # GET request: show registration form
         else:
-            form = CustomerRegistrationForm(initial={'phone': '09123456789'})
+            form = CustomerRegistrationForm()
 
         return render(request,
                       'core/register.html',
@@ -988,7 +988,6 @@ def reveal_discount(request, deal_id):
     # The JavaScript catches it and updates the HTML to show "25% OFF!"
 
 
-@login_required
 def demo_dashboard(request):
     """Static demo dashboard – shows how the seller panel works"""
     # get the demo store (id=3)
