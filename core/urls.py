@@ -9,7 +9,8 @@ from .views import (
     update_product, view_skus,
     account_settings, change_username,
     upload_logo, demo_dashboard,
-    sales_detail
+    sales_detail, landing_page,
+    why_mystery_deal
 )
 
 urlpatterns = [
@@ -24,6 +25,8 @@ urlpatterns = [
 
     # DEMO
     path('demo/dashboard/', demo_dashboard, name='demo_dashboard'),
+    path('landing/', landing_page, name='landing_page'),
+    path('why/', why_mystery_deal, name='why_mystery_deal'),
 
     # Dashboard URLs
     path('dashboard/', dashboard_home, name='dashboard_home'),

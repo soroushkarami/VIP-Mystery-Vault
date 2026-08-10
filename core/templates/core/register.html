@@ -24,6 +24,19 @@
 <div class="container">
     <div class="card shadow">
         <div class="card-body text-center">
+
+            <!-- ✅ DEMO WALKTHROUGH GUIDE (only for demo) -->
+            {% if is_demo %}
+                <div style="background: #dbeafe; border-radius: 16px; padding: 16px; margin-bottom: 20px; border-right: 6px solid #2563eb; text-align: right;">
+                    <div style="font-size: 1.2rem; font-weight: bold; color: #1e3a8a;">👋 تصور کن یک مشتری هستی...</div>
+                    <p style="margin: 8px 0 0; color: #1e3a8a;">
+                        کد QR روی پیشخوان فروشگاه رو اسکن کردی و الان به این صفحه اومدی.
+                        شماره موبایل و سایزت رو وارد کن تا ۳ تا تخفیف ویژه برات نمایش داده بشه.
+                    </p>
+                    <div style="font-size: 2rem; text-align: center; margin-top: 6px;">👇</div>
+                </div>
+            {% endif %}
+
             <h2 class="mb-3">🏪 {{ store.name }}</h2>
             <p class="text-muted">برای دریافت تخفیف ویژه، شماره موبایل و سایز خود را وارد کنید.</p>
 

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>چرا Mystery Deal؟ – راز بازگشت مشتری</title>
+
+    <!-- ✅ Vazirmatn Font -->
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" />
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html {
+            font-family: 'Vazirmatn', 'IRANSans', 'Tahoma', sans-serif;
+            background: #f8fafc;
+            color: #0f172a;
+            direction: rtl;
+            line-height: 1.8;
+        }
+        .container {
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+        .card {
+            background: #ffffff;
+            border-radius: 28px;
+            padding: 28px 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        h1 { font-size: 2rem; }
+        h2 { font-size: 1.6rem; margin-bottom: 16px; }
+        .text-center { text-align: center; }
+
+        /* Hero */
+        .hero {
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            color: white;
+            border-radius: 28px;
+            padding: 32px 24px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+        .hero h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+        .hero p {
+            opacity: 0.8;
+            font-size: 1.1rem;
+        }
+        .highlight-box {
+            background: #fef3c7;
+            border-radius: 16px;
+            padding: 20px;
+            border-right: 6px solid #f59e0b;
+            margin: 16px 0;
+        }
+        .highlight-box strong {
+            color: #78350f;
+        }
+        .emoji-big {
+            font-size: 2.5rem;
+            display: block;
+            margin-bottom: 8px;
+        }
+        .cta-phone {
+            display: inline-block;
+            background: #16a34a;
+            color: white;
+            padding: 14px 40px;
+            border-radius: 60px;
+            font-size: 1.5rem;
+            font-weight: 800;
+            text-decoration: none;
+            direction: ltr;
+            letter-spacing: 1px;
+            box-shadow: 0 8px 24px -6px #16a34a;
+            margin: 16px 0;
+        }
+        .cta-phone:hover {
+            background: #15803d;
+        }
+        .btn-back {
+            display: inline-block;
+            background: #e2e8f0;
+            color: #1e293b;
+            padding: 10px 24px;
+            border-radius: 40px;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .btn-back:hover {
+            background: #cbd5e1;
+        }
+        .list-check {
+            list-style: none;
+            padding: 0;
+        }
+        .list-check li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .list-check li:last-child {
+            border-bottom: 0;
+        }
+        @media (max-width: 480px) {
+            h1 { font-size: 1.6rem; }
+            .hero { padding: 24px 16px; }
+            .card { padding: 20px 16px; }
+            .cta-phone { font-size: 1.2rem; padding: 12px 24px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- HERO SECTION -->
+    <div class="hero">
+        <h1>🧠 راز بازگشت مشتری‌ها</h1>
+        <p>چرا Mystery Deal مشتری‌های یک‌باره را به <strong>مشتری‌های همیشگی</strong> تبدیل می‌کند؟</p>
+    </div>
+
+    <!-- CORE PSYCHOLOGICAL EXPLANATION -->
+    <div class="card">
+        <span class="emoji-big">🎯</span>
+        <h2>سیستم تخفیف معمولی ≠ سیستم بازی‌وار</h2>
+        <p>
+            در فروشگاه‌های معمولی، تخفیف، یک پیشنهاد ساده و بدون هیجان است.
+            مشتری می‌آید، تخفیف را می‌گیرد و دیگر برنمی‌گردد.
+        </p>
+        <div class="highlight-box">
+            <strong>🔑 اما در Mystery Deal، تخفیف به یک بازی هیجان‌انگیز تبدیل می‌شود.</strong>
+            <p style="margin-top: 8px; color: #1e293b;">
+                مشتری می‌داند که پشت هر کارت یک شگفتی پنهان است.
+                حس کنجکاوی و ترس از دست دادن (FOMO) او را وادار می‌کند که <strong>هر روز</strong> برگردد و امتحان کند.
+            </p>
+        </div>
+    </div>
+
+    <!-- THE LOOP -->
+    <div class="card">
+        <span class="emoji-big">🔄</span>
+        <h2>چرخه‌ی بازگشت مشتری</h2>
+        <p style="color: #475569;">این چرخه‌ی روانشناسی، مشتری را به فروشگاه شما قفل می‌کند:</p>
+        <ol style="padding-right: 20px; margin-top: 12px;">
+            <li><strong>📸 اسکن QR:</strong> مشتری کد را اسکن می‌کند و وارد بازی می‌شود.</li>
+            <li><strong>🎁 ۳ کارت مرموز:</strong> او ۳ کارت می‌بیند که پشت هرکدام یک تخفیف پنهان است.</li>
+            <li><strong>🤔 کنجکاوی و هیجان:</strong> او نمی‌داند پشت کدام کارت تخفیف بهتری است. این حس او را مجبور به انتخاب می‌کند.</li>
+            <li><strong>⏳ فوریت (Urgency):</strong> تخفیف فقط <strong>۲ ساعت</strong> اعتبار دارد. او مجبور است سریع تصمیم بگیرد.</li>
+            <li><strong>🔁 بازگشت دوباره:</strong> اگر امروز نخرد، فردا دوباره برمی‌گردد تا شانسش را دوباره امتحان کند.</li>
+        </ol>
+        <div style="background: #e0f2fe; padding: 16px; border-radius: 16px; margin-top: 16px;">
+            <strong>نتیجه:</strong> یک مشتری که فقط برای خرید یکباره و یا دیدن تخفیف آمده بود، حالا <strong>دائما</strong> به فروشگاه شما سر می‌زند.
+        </div>
+    </div>
+
+    <!-- 3 PSYCHOLOGICAL TRICKS -->
+    <div class="card">
+        <span class="emoji-big">🧩</span>
+        <h2>۳ ترفند روانشناسی پشت سیستم</h2>
+        <ul class="list-check">
+            <li>
+                <strong>🎰 ۱. شکاف کنجکاوی (Curiosity Gap):</strong>
+                <br>مشتری نمی‌داند چه تخفیفی دارد. این ابهام او را به سمت اسکن دوباره QR سوق می‌دهد.
+            </li>
+            <li>
+                <strong>⏳ ۲. ضررگریزی (Loss Aversion):</strong>
+                <br>وقتی تخفیف را می‌بیند، از دست دادن آن برایش سخت است (مخصوصاً با تایمر ۲ ساعته).
+            </li>
+            <li>
+                <strong>🎮 ۳. بازی‌وارسازی (Gamification):</strong>
+                <br>انتخاب کارت مثل یک بازی است. مغز انسان عاشق بازی و دریافت پاداش است.
+            </li>
+        </ul>
+        <p style="color: #475569; margin-top: 12px; font-size: 0.95rem;">
+            این ۳ ترفند با هم ترکیب می‌شوند تا یک مشتری معمولی را به یک <strong>وفادار و دائمی</strong> تبدیل کنند.
+        </p>
+    </div>
+
+    <!-- BENEFITS SUMMARY -->
+    <div class="card">
+        <span class="emoji-big">📝</span>
+        <h2>خلاصه‌ی مزایا برای فروشگاه شما</h2>
+        <ul class="list-check">
+            <li>✔️ <strong>افزایش تعداد دفعات مراجعه</strong> – مشتری‌ها برای امتحان شانسشان برمی‌گردند.</li>
+            <li>✔️ <strong>داده‌های دقیق مشتری</strong> – شماره موبایل، سایز و سلیقه‌ی هر مشتری را دارید.</li>
+            <li>✔️ <strong>افزایش فروش کالاهای راکد</strong> – تخفیف‌های هدفمند به محصولات خاص.</li>
+            <li>✔️ <strong>هیجان و رضایت مشتری</strong> – تجربه‌ای لذت‌بخش که او را به شما وفادار می‌کند.</li>
+        </ul>
+    </div>
+
+    <!-- FINAL CTA -->
+    <div class="card" style="background: #0f172a; color: white; border: none; text-align: center;">
+        <span style="font-size: 3rem;">🚀</span>
+        <h2 style="color: white; margin-top: 4px;">همین امروز شروع کنید</h2>
+        <p style="opacity: 0.8; margin-bottom: 16px;">
+            راه‌اندازی و آموزش سریع + ۱۰ روز تست
+            <br>همین حالا تماس بگیرید تا فروشگاهتان را هوشمند کنید.
+        </p>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 16px 0;">
+            <a href="tel:09044049514" style="display:inline-block; background:#800080; color:white; padding:12px 24px; border-radius:60px; font-size:1.1rem; font-weight:700; text-decoration:none; box-shadow:0 4px 12px -4px #800080;">
+                📞 تماس
+            </a>
+            <a href="https://wa.me/989044049514" target="_blank" style="display:inline-block; background:#008000; color:white; padding:12px 24px; border-radius:60px; font-size:1.1rem; font-weight:700; text-decoration:none; box-shadow:0 4px 12px -4px #008000;">
+                💬 واتساپ
+            </a>
+            <a href="https://t.me/Chocofox8" target="_blank" style="display:inline-block; background:#0088cc; color:white; padding:12px 24px; border-radius:60px; font-size:1.1rem; font-weight:700; text-decoration:none; box-shadow:0 4px 12px -4px #0088cc;">
+                🗪 تلگرام
+            </a>
+        </div>
+
+        <p style="opacity: 0.4; font-size: 0.8rem; margin-top: 12px;">
+            پاسخگوی شما از ۹ صبح تا ۷ شب هستم.
+        </p>
+        <div style="margin-top: 24px;">
+            <a href="{% url 'demo_dashboard' %}" class="btn-back" style="color: #0f172a;">← بازگشت به داشبورد دمو</a>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

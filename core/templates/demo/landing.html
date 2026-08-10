@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mystery Deal – سامانه تخفیف هوشمند</title>
+
+    <!-- ✅ Vazirmatn Font (Best modern Persian font) -->
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" />
+
+    <style>
+        /* ── Reset & Base ── */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html {
+            font-family: 'Vazirmatn', 'IRANSans', 'Tahoma', sans-serif;
+            background: #f1f5f9;
+            color: #0f172a;
+            direction: rtl;
+            scroll-behavior: smooth;
+            line-height: 1.7;
+        }
+        .container {
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        /* ── Cards / Sections ── */
+        .card {
+            background: #ffffff;
+            border-radius: 28px;
+            padding: 28px 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            transition: transform 0.15s ease;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+        }
+        .glass {
+            background: rgba(255,255,255,0.6);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.8);
+        }
+
+        /* ── Typography ── */
+        h1, h2, h3 {
+            font-weight: 800;
+            letter-spacing: -0.3px;
+        }
+        h1 { font-size: 2.1rem; }
+        h2 { font-size: 1.6rem; margin-bottom: 16px; }
+        .text-muted { color: #475569; }
+        .text-center { text-align: center; }
+
+        /* ── Hero ── */
+        .hero {
+            background: linear-gradient(145deg, #0f172a, #1e3a5f);
+            color: white;
+            border-radius: 28px;
+            padding: 32px 24px;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::after {
+            content: "✨";
+            font-size: 8rem;
+            position: absolute;
+            bottom: -20px;
+            left: -10px;
+            opacity: 0.08;
+            transform: rotate(-8deg);
+        }
+        .hero .badge {
+            display: inline-block;
+            background: #facc15;
+            color: #0f172a;
+            font-weight: 700;
+            font-size: 0.75rem;
+            padding: 4px 14px;
+            border-radius: 40px;
+            margin-bottom: 12px;
+        }
+        .hero h1 {
+            font-size: 2.2rem;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 2;
+        }
+        .hero p {
+            font-size: 1.05rem;
+            opacity: 0.85;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* ── Buttons ── */
+        .btn {
+            display: inline-block;
+            padding: 12px 32px;
+            border-radius: 60px;
+            font-weight: 700;
+            font-size: 1rem;
+            text-decoration: none;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+            box-shadow: 0 6px 18px -6px #2563eb;
+        }
+        .btn-primary:hover {
+            background: #1d4ed8;
+            transform: scale(1.03);
+        }
+        .btn-success {
+            background: #16a34a;
+            color: white;
+            box-shadow: 0 6px 18px -6px #16a34a;
+        }
+        .btn-success:hover {
+            background: #15803d;
+            transform: scale(1.03);
+        }
+        .btn-outline-light {
+            background: transparent;
+            color: white;
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+        .btn-outline-light:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: white;
+        }
+
+        .btn-block {
+            display: block;
+            width: 100%;
+            text-align: center;
+        }
+
+        /* ── Demo Phone Mockup ── */
+        .phone-mockup {
+            background: #0f172a;
+            border-radius: 28px;
+            padding: 16px 12px 12px;
+            max-width: 280px;
+            margin: 16px auto 0;
+            box-shadow: 0 20px 40px -8px rgba(0,0,0,0.4);
+        }
+        .phone-screen {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 16px;
+            color: #0f172a;
+            font-size: 0.8rem;
+            min-height: 160px;
+        }
+        .phone-screen .status-bar {
+            display: flex;
+            justify-content: space-between;
+            color: #64748b;
+            font-size: 0.65rem;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+        }
+        .phone-screen .stat-row {
+            display: flex;
+            justify-content: space-between;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        }
+        .phone-screen .stat-row .num {
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        /* ── Steps ── */
+        .step-list {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+        .step-num {
+            background: #dbeafe;
+            color: #1e3a8a;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        /* ── Benefits Grid ── */
+        .benefit-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        .benefit-item {
+            background: #f8fafc;
+            border-radius: 18px;
+            padding: 16px 14px;
+            text-align: center;
+            border: 1px solid #eef2f6;
+        }
+        .benefit-item .icon {
+            font-size: 2rem;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .benefit-item strong {
+            font-size: 0.95rem;
+        }
+        .benefit-item small {
+            display: block;
+            color: #64748b;
+            font-size: 0.75rem;
+        }
+
+        /* ── Demo CTA ── */
+        .demo-cta {
+            background: linear-gradient(145deg, #f0fdf4, #dcfce7);
+            border: 2px dashed #22c55e;
+            border-radius: 28px;
+            padding: 28px 20px;
+            text-align: center;
+        }
+
+        /* ── Video ── */
+        .video-wrapper {
+            background: #0f172a;
+            border-radius: 20px;
+            overflow: hidden;
+            aspect-ratio: 16/9;
+            margin: 16px 0;
+        }
+        .video-wrapper iframe {
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 480px) {
+            .benefit-grid { grid-template-columns: 1fr; }
+            .hero h1 { font-size: 1.6rem; }
+            .hero { padding: 24px 16px; }
+            .card { padding: 20px 16px; }
+            .phone-mockup { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- ========================================= -->
+    <!-- HERO SECTION                              -->
+    <!-- ========================================= -->
+    <div class="hero">
+        <span class="badge">✨ مخصوص فروشگاه‌های پوشاک</span>
+        <h1>🥼🧥 Mystery Deal</h1>
+        <p>مشتری‌هایت را بدون زحمت اضافی به مشتری دائمی تبدیل کن.</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px;">
+            {% if demo_store_id %}
+                <a href="/scan/{{ demo_store_id }}/" class="btn btn-primary" style="background: #15803d; box-shadow: 0 6px 18px -6px #15803d; font-size: 1.2rem; padding: 16px;">
+                    ❯❯❯❯ دموی گام به گام
+                </a>
+            {% else %}
+                <p style="color: red;">⚠️ فروشگاه دمو یافت نشد. لطفاً با پشتیبانی تماس بگیرید.</p>
+            {% endif %}
+            <a href="#contact" class="btn btn-primary" style="background: #0000FF; box-shadow: 0 6px 18px -6px #0000FF; font-size: 1.2rem; padding: 16px;">
+                ارتباط
+            </a>
+        </div>
+
+        <!-- Phone Mockup (shows a glimpse of the dashboard) -->
+        <div class="phone-mockup">
+            <div class="phone-screen">
+                <div class="status-bar">
+                    <span>📶</span>
+                    <span>داشبورد فروشنده</span>
+                    <span>🔋</span>
+                </div>
+                <div class="stat-row">
+                    <span>👤 مشتریان این ماه</span>
+                    <span class="num">۲۴</span>
+                </div>
+                <div class="stat-row">
+                    <span>💰 فروش این ماه</span>
+                    <span class="num">۱۲</span>
+                </div>
+                <div class="stat-row">
+                    <span>⏳ درخواست‌های جدید</span>
+                    <span class="num">۳</span>
+                </div>
+                <div style="background:#dbeafe; border-radius:12px; padding:8px; text-align:center; margin-top:6px; font-size:0.7rem; color:#1e3a8a;">
+                    ✅ ۳ پیشنهاد جدید در انتظار تأیید
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================= -->
+    <!-- HOW IT WORKS                               -->
+    <!-- ========================================= -->
+    <div class="card">
+        <h2>🗲 فقط ۳ قدم</h2>
+        <div class="step-list">
+            <div class="step-item">
+                <div class="step-num">۱</div>
+                <div>
+                    <strong>📲 اسکن QR</strong><br>
+                    مشتری بعد از اولین خرید، کد QR موجود روی پیشخوان را با گوشی اسکن می‌کند. شماره موبایل و سایز خود را ثبت می‌کند. این ثبت نام فقط یکبار نیاز است.
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-num">۲</div>
+                <div>
+                    <strong>🎁 بازی تخفیف</strong><br>
+                    مشتری ۳ کارت می‌بیند. پشت هر کدام یک تخفیف <strong>۱۰ تا ۳۰ درصدی</strong> پنهان است. او فقط یکی را می‌تواند بر‌گرداند.
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-num">۳</div>
+                <div>
+                    <strong>✔️ تأیید فروش</strong><br>
+                    مشتری کارت خود را به شما نشان می‌دهد. شما از داشبورد فروشنده دکمه <strong>«تأیید فروش»</strong> را می‌زنید.
+                    موجودی کالا <strong>خودکار</strong> کم می‌شود.
+                </div>
+            </div>
+        </div>
+        <p style="color:#475569; margin-top:16px;">📱 فقط یک گوشی هوشمند یا تبلت نیاز دارید. هیچ سخت‌افزار اضافه‌ای نمی‌خواهد.</p>
+    </div>
+
+    <!-- ========================================= -->
+    <!-- BENEFITS                                   -->
+    <!-- ========================================= -->
+    <div class="card">
+        <h2>📜 مزایا برای شما</h2>
+        <div class="benefit-grid">
+            <div class="benefit-item">
+                <span class="icon">🛒</span>
+                <strong>شناخت مشتری</strong>
+                <small>شماره، سایز، تاریخچه خرید</small>
+            </div>
+            <div class="benefit-item">
+                <span class="icon">📈</span>
+                <strong>افزایش فروش</strong>
+                <small>پیشنهادهای هدفمند</small>
+            </div>
+            <div class="benefit-item">
+                <span class="icon">📦</span>
+                <strong>گردش کالا</strong>
+                <small>محصولات راکد را به چرخه فروش برگردانید</small>
+            </div>
+            <div class="benefit-item">
+                <span class="icon">🧠</span>
+                <strong>تخفیف‌های هوشمند</strong>
+                <small>سیستم اجازه ضرر کردن شما را نمی‌دهد</small>
+            </div>
+            <div class="benefit-item">
+                <span class="icon">∞</span>
+                <strong>بازگشت مشتری</strong>
+                <small>سیستم کول‌دان هوشمند</small>
+            </div>
+            <div class="benefit-item">
+                <span class="icon">🔂</span>
+                <strong>کاملاً خودکار</strong>
+                <small>یک بار تنظیم کنید، دیگر نگران نباشید</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================= -->
+    <!-- WHY MYSTERY DEAL (Psychology Card)        -->
+    <!-- ========================================= -->
+    <div class="card" style="background: linear-gradient(145deg, #fef3c7, #fde68a); border: 2px solid #f59e0b;">
+        <div style="text-align: center;">
+            <span style="font-size: 3rem;">🤔</span>
+            <h2 style="margin: 4px 0;">خب حالا که چی؟</h2>
+            <p style="color: #78350f; font-size: 1.05rem;">
+                راز روانشناسی پشت سیستم را ببینید.
+                چرا مشتری‌ها بارها و بارها برمی‌گردند؟
+            </p>
+            <div style="margin-top: 16px;">
+                <a href="{% url 'why_mystery_deal' %}" class="btn" style="background: #d97706; color: white; box-shadow: 0 6px 18px -6px #d97706; font-weight: 700; padding: 12px 32px; border-radius: 60px; text-decoration: none;">
+                    📖 مشاهده توضیحات کامل
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================= -->
+<!-- LIVE DEMO WALKTHROUGH (Replaces video)    -->
+<!-- ========================================= -->
+    <div class="card" style="background: linear-gradient(145deg, #fef3c7, #fde68a); border: 2px solid #f59e0b;">
+        <div style="text-align: center;">
+            <span style="font-size: 3rem;">🚶</span>
+            <h2 style="margin: 4px 0;">تجربه‌ی زنده (بدون نصب)</h2>
+            <p style="color: #78350f; font-size: 1.05rem;">
+                خودت را جای یک مشتری بگذار. کد QR را اسکن کن، تخفیف ببین،
+                <br>و بعد ببین چطور درخواست به پنل فروشنده می‌رسد.
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 10px; max-width: 350px; margin: 16px auto;">
+                {% if demo_store_id %}
+                    <a href="/scan/{{ demo_store_id }}/" class="btn btn-primary" style="background: #d97706; box-shadow: 0 6px 18px -6px #d97706; font-size: 1.2rem; padding: 16px;">
+                        📱 شروع تجربه مشتری
+                    </a>
+                {% else %}
+                <p style="color: red;">⚠️ فروشگاه دمو یافت نشد. لطفاً با پشتیبانی تماس بگیرید.</p>
+                {% endif %}
+                <small style="color: #78350f;">
+                    🔹 این یک نسخه آزمایشی است. نیازی به ثبت‌نام نیست.
+                </small>
+            </div>
+            <div style="font-size: 0.9rem; background: #fff7ed; padding: 12px; border-radius: 16px; display: inline-block;">
+                ⏱️ کل فرآیند کمتر از ۲ دقیقه است.
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================= -->
+    <!-- DEMO CTA (DIRECT LINK)                     -->
+    <!-- ========================================= -->
+    <div class="demo-cta">
+        <div style="font-size:2.5rem; margin-bottom:4px;">💻</div>
+        <a href="{% url 'demo_dashboard' %}" class="btn btn-success btn-block" style="margin-top:16px; font-size:1.2rem; padding:16px;">
+            ️ ورود به داشبورد فروشنده
+        </a>
+        <small style="display:block; margin-top:10px; color:#475569;">
+            نیازی به ثبت‌نام نیست. فقط کلیک کنید و محیط پنل را ببینید.
+        </small>
+    </div>
+
+
+
+    <!-- ========================================= -->
+    <!-- FINAL CALL TO ACTION (CONTACT)            -->
+    <!-- ========================================= -->
+    <div id="contact" class="card" style="background: #0f172a; color: white; border: none;">
+        <h2 style="color:white;">🤝 آماده‌اید شروع کنید؟</h2>
+        <ul style="list-style:none; padding:0; margin:16px 0;">
+            <li>✔️ کد QR اختصاصی فروشگاه شما</li>
+            <li>✔️ داشبورد مدیریت کامل</li>
+            <li>✔️ راه‌اندازی سریع + آموزش</li>
+            <li>✔️ پشتیبانی کامل</li>
+            <li>✔️ ۱۰ روز تست</li>
+        </ul>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 16px 0;">
+            <a href="tel:09044049514" style="display:inline-block; background:#800080; color:white; padding:12px 24px; border-radius:60px; font-size:1.1rem; font-weight:700; text-decoration:none; box-shadow:0 4px 12px -4px #800080;">
+                📞 تماس
+            </a>
+            <a href="https://wa.me/989044049514" target="_blank" style="display:inline-block; background:#008000; color:white; padding:12px 24px; border-radius:60px; font-size:1.1rem; font-weight:700; text-decoration:none; box-shadow:0 4px 12px -4px #008000;">
+                💬 واتساپ
+            </a>
+            <a href="https://t.me/Chocofox8" target="_blank" style="display:inline-block; background:#0088cc; color:white; padding:12px 24px; border-radius:60px; font-size:1.1rem; font-weight:700; text-decoration:none; box-shadow:0 4px 12px -4px #0088cc;">
+                🗪 تلگرام
+            </a>
+        </div>
+        <p style="opacity:0.5; margin-top:16px; font-size:0.8rem;">
+            همین الان تماس بگیرید تا فروشگاه‌تان هوشمند شود.
+        </p>
+    </div>
+
+    <div style="text-align:center; font-size:0.7rem; color:#94a3b8; padding:20px 0;">
+        Mystery Deal – سامانه هوشمند فروش پوشاک
+    </div>
+
+</div>
+</body>
+</html>

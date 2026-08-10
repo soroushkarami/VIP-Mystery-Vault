@@ -11,6 +11,17 @@
 </head>
 <body>
 <div class="container mt-4">
+
+    <!-- ✅ WELCOME GUIDE -->
+    <div style="background: #fef3c7; border-radius: 16px; padding: 16px; margin-bottom: 20px; border-right: 6px solid #f59e0b;">
+        <div style="font-size: 1.2rem; font-weight: bold; color: #78350f;">👏 آفرین! رسیدی به پنل فروشنده</div>
+        <p style="margin: 8px 0 0; color: #78350f;">
+            ببین، همون درخواستی که مشتری ثبت کرد، الان توی لیست <strong>«درخواست‌های تخفیف»</strong> هست.
+            اینجا می‌تونی درخواست‌ها رو ببینی، تأیید کنی یا موجودی کالا رو مدیریت کنی.
+        </p>
+        <div style="font-size: 2rem; text-align: center; margin-top: 6px;">👇</div>
+    </div>
+
     <!-- Demo Banner -->
     <div class="alert alert-warning text-center">
         🔹 <strong>نسخه نمایشی</strong><br>
@@ -78,6 +89,26 @@
             این یک نسخه نمایشی است. برای راه‌اندازی فروشگاه خود، با ما تماس بگیرید: 09044049514
         </p>
     </div>
+
+    <!-- ✅ NEW: Psychological Hook Card -->
+    <div class="row g-3 mt-3">
+        <div class="col-12">
+            <div class="card text-center border-warning" style="background: #fffbeb;">
+                <div class="card-body">
+                    <div style="font-size: 2rem;">🤔</div>
+                    <h5 style="font-weight: 700;">خب حالا که چی؟</h5>
+                    <p class="text-muted">
+                        راز روانشناسی پشت سیستم را ببینید.
+                        چرا مشتری‌ها بارها و بارها برمی‌گردند؟
+                    </p>
+                    <a href="{% url 'why_mystery_deal' %}" class="btn btn-warning" style="font-weight: 700;">
+                        📖 مشاهده توضیحات کامل
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 </body>
 </html>

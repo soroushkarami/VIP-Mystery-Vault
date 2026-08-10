@@ -345,51 +345,6 @@ def dashboard_home(request):
                   })
 
 
-@login_required
-def demo_dashboard(request):
-    """Static demo dashboard – shows how the seller panel works"""
-    # get the demo store (id=3)
-    demo_store = Store.objects.filter(is_demo=True).first()
-    if not demo_store:
-        return redirect('home')     # home is login page (core/urls)
-
-    # Get the current customer from session (so that the deals are shown for each seller separately)
-    customer_id = request.session.get('customer_id', None)
-    customer = None
-    if customer_id:
-        try:
-            customer = Customer.objects.get(id=customer_id, store=demo_store)
-        except Customer.DoesNotExist:
-            pass
-
-    # Filter deals by this specific customer (if exists)
-    demo_deals = DailyDeal.objects.filter(
-        customer__store=demo_store,
-        is_claimed=False,
-        expires_at__gt=timezone.now()
-    )
-
-    # If we have a customer, only show their deals
-    if customer:
-        demo_deals = demo_deals.filter(customer=customer)
-        pending_count = demo_deals.count()
-    else:
-        demo_deals = demo_deals.none()
-        pending_count = 0
-
-    demo_deals = demo_deals.select_related('customer', 'product')[:5]
-
-    return render(request,
-                  'core/demo_dashboard.html',
-                  {
-                      'store': demo_store,
-                      'deals': demo_deals,
-                      'is_demo': True,
-                      'pending_deals': pending_count,
-                      'customer_phone': customer.phone if customer else None
-                  })
-
-
 # ---------- PENDING DEALS LIST ----------
 @subscription_required
 @login_required
@@ -832,13 +787,14 @@ def scan_qr(request, store_id=None):
 
         # GET request: show registration form
         else:
-            form = CustomerRegistrationForm()
+            form = CustomerRegistrationForm(initial={'phone': '09123456789'})
 
         return render(request,
                       'core/register.html',
                       {
                           'store': store,
-                          'form': form
+                          'form': form,
+                          'is_demo': is_demo
                       })
 
     # Check if customer has a notification message (from replacement deal, etc.)
@@ -1030,3 +986,60 @@ def reveal_discount(request, deal_id):
     })
     # This JSON package flies back to customer's phone.
     # The JavaScript catches it and updates the HTML to show "25% OFF!"
+
+
+@login_required
+def demo_dashboard(request):
+    """Static demo dashboard – shows how the seller panel works"""
+    # get the demo store (id=3)
+    demo_store = Store.objects.filter(is_demo=True).first()
+    if not demo_store:
+        return redirect('home')     # home is login page (core/urls)
+
+    # Get the current customer from session (so that the deals are shown for each seller separately)
+    customer_id = request.session.get('customer_id', None)
+    customer = None
+    if customer_id:
+        try:
+            customer = Customer.objects.get(id=customer_id, store=demo_store)
+        except Customer.DoesNotExist:
+            pass
+
+    # Filter deals by this specific customer (if exists)
+    demo_deals = DailyDeal.objects.filter(
+        customer__store=demo_store,
+        is_claimed=False,
+        expires_at__gt=timezone.now()
+    )
+
+    # If we have a customer, only show their deals
+    if customer:
+        demo_deals = demo_deals.filter(customer=customer)
+        pending_count = demo_deals.count()
+    else:
+        demo_deals = demo_deals.none()
+        pending_count = 0
+
+    demo_deals = demo_deals.select_related('customer', 'product')[:5]
+
+    return render(request,
+                  'demo/demo_dashboard.html',
+                  {
+                      'store': demo_store,
+                      'deals': demo_deals,
+                      'is_demo': True,
+                      'pending_deals': pending_count,
+                      'customer_phone': customer.phone if customer else None
+                  })
+
+
+def landing_page(request):
+    demo_store = Store.objects.filter(is_demo=True).first()
+    return render(request,
+                  'demo/landing.html',
+                  {'demo_store_id': demo_store.id if demo_store else None}
+                  )
+
+
+def why_mystery_deal(request):
+    return render(request, 'demo/why_mystery_deal.html')
