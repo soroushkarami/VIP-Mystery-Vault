@@ -470,18 +470,33 @@ def toggle_out_of_stock(request, product_id):
             ).exclude(id=product.id).first()
 
             if replacement:
-                # create a new deal with the same discount
+                # Increase the discount for replacement deals
+                original_discount = deal.discount_percent
+                bonus_discount = 5  # Add 5% extra for the inconvenience
+                new_discount = min(original_discount + bonus_discount, 30)  # Cap at 30%
+
                 new_deal = DailyDeal.create_deal(
                     customer=customer,
                     product=replacement,
-                    discount=deal.discount_percent,
+                    discount=new_discount,  # ← Higher discount!
                     hours=2
                 )
-                # Set notification message for the customer
-                customer.notification_message = f"🔄 Your deal for {product.name} has been replaced with {replacement.name} at the same discount!"
+
+                # Mark the NEW deal as auto-revealed (but don't lock others)
+                new_deal.has_revealed = True  # Show the discount
+                new_deal.save()
+
+                # Clear the OLD deal's has_revealed
+                deal.has_revealed = False
+                deal.save()
+
+                customer.notification_message = (
+                    f"🔄 متأسفیم، {product.name} تمام شد! "
+                    f"به جای آن {replacement.name} با تخفیف {new_discount}% (به جای {original_discount}%) تقدیم شما! 🎉"
+                )
                 customer.save()
                 messages.info(request,
-                              f"🔄 Replaced deal for {customer.phone}: {product.name} → {replacement.name}")
+                              f"🔄 Replaced deal for {customer.phone}: {product.name} → {replacement.name} with {new_discount}% discount (was {original_discount}%)")
             else:
                 # No replacement found → notify seller
                 messages.warning(request,
@@ -925,6 +940,19 @@ def scan_qr(request, store_id=None):
 
     revealed_deal_id = revealed_deal.id if revealed_deal else None
 
+    # ==== Check for auto-revealed replacement deal ====
+    auto_revealed_id = None
+
+    # If notification mentions replacement, find the auto-revealed deal
+    if customer.notification_message and "تمام شد" in customer.notification_message:
+        auto_revealed = DailyDeal.objects.filter(
+            customer=customer,
+            is_claimed=False,
+            has_revealed=True
+        ).first()
+        if auto_revealed:
+            auto_revealed_id = auto_revealed.id
+
     for deal in deals:      # we pass it directly to the HTML so that after refresh the discount is shown without using AJAX again
         deal.discounted_price = int(deal.product.price * (100 - deal.discount_percent) / 100)
 
@@ -937,7 +965,8 @@ def scan_qr(request, store_id=None):
                       'notification': notification,
                       'is_demo': is_demo,
                       'has_revealed': has_revealed,
-                      'revealed_deal_id': revealed_deal_id
+                      'revealed_deal_id': revealed_deal_id,
+                      'auto_revealed_id': auto_revealed_id
                   })
 
 

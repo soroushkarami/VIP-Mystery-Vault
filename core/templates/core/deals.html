@@ -315,11 +315,16 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // ==== RESTORE REVEALED STATE ====
-    const hasRevealed = {{ has_revealed|yesno:"true,false" }};
-    const revealedDealId = {{ revealed_deal_id|default:"null" }};
     const cards = document.querySelectorAll('.deal-card');
 
+    // ==== AUTO-REVEALED REPLACEMENT DEAL ====
+    const autoRevealedId = {{ auto_revealed_id|default:"null" }};
+    const hasRevealed = {{ has_revealed|yesno:"true,false" }};
+    const revealedDealId = {{ revealed_deal_id|default:"null" }};
+
+    let manualRevealedId = null;
+
+    // ==== RESTORE REVEALED STATE ====
     if (hasRevealed && revealedDealId) {
         const revealDiv = document.getElementById('reveal-' + revealedDealId);
         if (revealDiv) {
@@ -327,47 +332,54 @@ document.addEventListener('DOMContentLoaded', function() {
             const card = document.querySelector(`.deal-card[data-deal-id="${revealedDealId}"]`);
             if (card) {
                 const discountedPrice = card.dataset.discountedPrice;
-                if (discountedPrice) {
-                    document.getElementById('discounted-' + revealedDealId).textContent = discountedPrice;
-                }
+                document.getElementById('discounted-' + revealedDealId).textContent = discountedPrice;
             }
-            cards.forEach(c => {
-                if (parseInt(c.dataset.dealId) !== revealedDealId) {
-                    c.classList.add('locked');
-                }
-            });
+
+            // ✅ If it's AUTO-REVEALED (replacement), DO NOT lock other cards
+            if (autoRevealedId !== null && parseInt(revealedDealId) === autoRevealedId) {
+                // Keep other cards unlocked (do nothing)
+            } else {
+                // Manual reveal – lock all other cards
+                manualRevealedId = revealedDealId;
+                cards.forEach(c => {
+                    if (parseInt(c.dataset.dealId) !== revealedDealId) {
+                        c.classList.add('locked');
+                    }
+                });
+            }
         }
     }
 
-    // ==== COUNTDOWN TIMER (English) ====
-    const timers = document.querySelectorAll('.expiry-timer');
+    // ==== CHECK FOR REPLACEMENT NOTIFICATION (auto-refresh) ====
+    const notification = document.querySelector('.notification-alert');
+    if (notification && notification.textContent.includes('تمام شد')) {
+        setTimeout(() => {
+            location.reload();
+        }, 3000);
+    }
 
+    // ==== COUNTDOWN TIMER ====
+    const timers = document.querySelectorAll('.expiry-timer');
     function updateTimers() {
         const now = new Date().getTime();
-
         timers.forEach(function(el) {
             const expiry = new Date(el.dataset.expiry).getTime();
             const distance = expiry - now;
-
             if (distance < 0) {
                 el.textContent = '⏳ Expired';
                 el.classList.add('expired');
                 return;
             }
-
             const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-
             let parts = [];
             if (hours > 0) parts.push(hours + (hours === 1 ? ' hour' : ' hours'));
             if (minutes > 0) parts.push(minutes + (minutes === 1 ? ' minute' : ' minutes'));
             if (parts.length === 0) parts.push('Less than a minute');
-
             el.textContent = '⏳ ' + parts.join(' and ') + ' remaining';
             el.classList.remove('expired');
         });
     }
-
     updateTimers();
     setInterval(updateTimers, 60000);
 
@@ -379,7 +391,18 @@ document.addEventListener('DOMContentLoaded', function() {
             const dealId = parseInt(this.dataset.dealId);
             const revealDiv = document.getElementById('reveal-' + dealId);
 
-            if (revealDiv.classList.contains('show') || hasRevealedLocal) {
+            // ✅ If already revealed, do nothing
+            if (revealDiv.classList.contains('show')) {
+                return;
+            }
+
+            // ✅ If a manual reveal already happened, block others
+            if (manualRevealedId !== null && manualRevealedId !== dealId) {
+                return;
+            }
+
+            // ✅ If this card is locked, block
+            if (this.classList.contains('locked')) {
                 return;
             }
 
@@ -403,13 +426,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 revealDiv.classList.add('show');
                 this.style.opacity = '1';
 
-                hasRevealedLocal = true;
+                // ✅ If this is MANUAL reveal, lock all other cards
+                manualRevealedId = dealId;
                 cards.forEach(c => {
-                    const cId = parseInt(c.dataset.dealId);
-                    if (cId !== dealId) {
+                    if (parseInt(c.dataset.dealId) !== dealId) {
                         c.classList.add('locked');
                     }
                 });
+                hasRevealedLocal = true;
             })
             .catch(error => {
                 console.error('Error:', error);
