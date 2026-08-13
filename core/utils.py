@@ -30,7 +30,13 @@ def get_top_deals(customer, store, top_k=3):
 
     # TODO 2. Score each product
     scores = []
-    style_tags = customer.style_tags.get('categories', {})
+    style_tags = {}
+
+    # If customer CONSENTED, use style tags (personalized)
+    if customer.consent_given:
+        style_tags = customer.style_tags.get('categories', {})
+
+        # If NO consent -> use empty style tags (random deals)
 
     for product in products:
         the_score = 0

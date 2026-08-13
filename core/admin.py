@@ -96,8 +96,8 @@ class ProductAdmin(admin.ModelAdmin):
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ('phone', 'size', 'visit_count', 'store')
-    list_filter = ('store', 'phone')
+    list_display = ('phone', 'size', 'visit_count', 'store', 'consent_given')
+    list_filter = ('store', 'phone', 'consent_given')
 
 @admin.register(DailyDeal)
 class DailyDealAdmin(admin.ModelAdmin):

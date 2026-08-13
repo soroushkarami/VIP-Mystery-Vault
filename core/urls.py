@@ -10,7 +10,7 @@ from .views import (
     account_settings, change_username,
     upload_logo, demo_dashboard,
     sales_detail, landing_page,
-    why_mystery_deal
+    why_mystery_deal, update_consent
 )
 
 urlpatterns = [
@@ -43,4 +43,5 @@ urlpatterns = [
     path('scan/<int:store_id>/', scan_qr, name='scan_qr'),
     path('deals/<int:store_id>/', scan_qr, name='show_deals'),
     path('reveal/<int:deal_id>/', reveal_discount, name='reveal_discount'),
+    path('consent/<int:store_id>/', update_consent, name='update_consent')
 ]

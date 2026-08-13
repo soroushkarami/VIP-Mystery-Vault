@@ -712,6 +712,7 @@ def scan_qr(request, store_id=None):
             if form.is_valid():  # is_valid calls clean_phone and clean_size funcs in the forms module
                 phone = form.cleaned_data['phone']
                 size = form.cleaned_data['size']
+                consent = form.cleaned_data.get('consent', True)    # getting consent bool to save the exact time and data
 
                 # Anti-Spam: Check fingerprint limits BEFORE creating customer
                 fingerprint = request.POST.get('fingerprint', '')
@@ -776,10 +777,17 @@ def scan_qr(request, store_id=None):
                 # if customer exists but size is different --> update it
                 if not created and customer.size != size:
                     customer.size = size
-                    customer.save()
+
+                if created or (customer and not customer.consent_given):
+                    customer.consent_given = consent
+                    customer.consent_given_at = timezone.now() if consent else None
+
+                customer.save()
 
                 # save customer id in session (so they're identified on their next visit)
                 request.session['customer_id'] = customer.id
+
+
 
                 # redirect to show the deals
                 return redirect('scan_qr',
@@ -986,6 +994,18 @@ def reveal_discount(request, deal_id):
     })
     # This JSON package flies back to customer's phone.
     # The JavaScript catches it and updates the HTML to show "25% OFF!"
+
+
+def update_consent(request, store_id):
+    customer_id = request.session.get('customer_id')
+    if customer_id:
+        customer = get_object_or_404(Customer, id=customer_id)
+        # toggle:
+        customer.consent_given = not customer.consent_given
+        customer.consent_given_at = timezone.now() if customer.consent_given else None
+        customer.save()
+
+        return redirect('scan_qr', store_id=store_id)
 
 
 def demo_dashboard(request):

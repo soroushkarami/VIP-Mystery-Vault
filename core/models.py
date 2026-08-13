@@ -103,6 +103,9 @@ class Customer(models.Model):
                                    db_index=True)
     registration_ip = models.GenericIPAddressField(null=True, blank=True)
     shadow_banned = models.BooleanField(default=False)
+    # user agreement
+    consent_given = models.BooleanField(default=True)
+    consent_given_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f'{self.phone} - {self.store}'

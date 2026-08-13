@@ -39,6 +39,14 @@ class CustomerRegistrationForm(forms.Form):
         widget=forms.Select(attrs={'class': 'form-select'})
     )
 
+    # user agreement
+    consent = forms.BooleanField(
+        required=False,
+        initial=True,
+        label='.موافقم که اطلاعات خرید من برای ارائه تخفیف‌های بهتر ذخیره شود',
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+
     def clean_phone(self):    # runs automatically when form.is_valid() is called
         phone = self.cleaned_data['phone']
         phone = persian_to_english_numbers(phone)

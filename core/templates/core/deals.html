@@ -93,6 +93,13 @@
         <p class="text-muted">هر کدام را انتخاب کنید و در فروشگاه به فروشنده نشان دهید.</p>
     </div>
 
+    <hr>
+    <small>
+        <a href="{% url 'update_consent' store.id %}" style="color: #6c757d;">
+            تغییر تنظیمات حریم خصوصی
+        </a>
+    </small>
+
     <!-- ✅ BIG BUTTON TO GO TO SELLER DASHBOARD (only for demo) -->
     {% if is_demo %}
         <div class="text-center mt-5" style="border-top: 2px dashed #f59e0b; padding-top: 30px;">

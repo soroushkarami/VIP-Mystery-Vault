@@ -68,6 +68,25 @@
                     {% endif %}
                 </div>
 
+                <!-- Consent Checkbox -->
+                <div class="mb-3 text-end">
+                    <div class="form-check">
+                        {{ form.consent }}
+                        <label class="form-check-label" for="{{ form.consent.id_for_label }}">
+                            <small>
+                                .موافقم که اطلاعات خرید من برای ارائه تخفیف‌های بهتر ذخیره شود
+                                <br>
+                                <span style="color: #6c757d; font-size: 0.75rem;">
+                                    (.این داده‌ها فقط برای بهبود تخفیف‌های شما استفاده می‌شود)
+                                </span>
+                            </small>
+                        </label>
+                    </div>
+                    {% if form.consent.errors %}
+                        <div class="text-danger small">{{ form.consent.errors }}</div>
+                    {% endif %}
+                </div>
+
                 <button type="submit" class="btn btn-primary w-100">دریافت تخفیف</button>
             </form>
         </div>
