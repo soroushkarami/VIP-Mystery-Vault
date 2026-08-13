@@ -132,6 +132,7 @@ class DailyDeal(models.Model):
     is_claimed = models.BooleanField(default=False)     # if seller confirmed sold
     is_bought = models.BooleanField(default=False)    # if customer actually bought
     has_revealed = models.BooleanField(default=False)   # to make sure customer can only select 1 one of the deals
+    auto_revealed = models.BooleanField(default=False)
 
     def __str__(self):
         return f'Deal for {self.customer.phone} - {self.product.name} : {self.discount_percent}%'

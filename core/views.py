@@ -470,6 +470,19 @@ def toggle_out_of_stock(request, product_id):
             ).exclude(id=product.id).first()
 
             if replacement:
+                # Check if a replacement deal already exists for this customer
+                existing_replacement = DailyDeal.objects.filter(
+                    customer=customer,
+                    product=replacement,
+                    is_claimed=False,
+                    auto_revealed=True,
+                    expires_at__gt=timezone.now()
+                ).first()
+                if existing_replacement:
+                    # Already replaced, skip replacing again
+                    messages.info(request, f"Replacement already exists for {customer.phone}")
+                    continue
+
                 # Increase the discount for replacement deals
                 original_discount = deal.discount_percent
                 bonus_discount = 5  # Add 5% extra for the inconvenience
@@ -484,6 +497,7 @@ def toggle_out_of_stock(request, product_id):
 
                 # Mark the NEW deal as auto-revealed (but don't lock others)
                 new_deal.has_revealed = True  # Show the discount
+                new_deal.auto_revealed = True
                 new_deal.save()
 
                 # Clear the OLD deal's has_revealed
@@ -943,15 +957,14 @@ def scan_qr(request, store_id=None):
     # ==== Check for auto-revealed replacement deal ====
     auto_revealed_id = None
 
-    # If notification mentions replacement, find the auto-revealed deal
-    if customer.notification_message and "تمام شد" in customer.notification_message:
-        auto_revealed = DailyDeal.objects.filter(
-            customer=customer,
-            is_claimed=False,
-            has_revealed=True
-        ).first()
-        if auto_revealed:
-            auto_revealed_id = auto_revealed.id
+    # Find any deal that was auto‑revealed and still pending
+    auto_revealed_deal = DailyDeal.objects.filter(
+        customer=customer,
+        is_claimed=False,
+        auto_revealed=True
+    ).first()
+    if auto_revealed_deal:
+        auto_revealed_id = auto_revealed_deal.id
 
     for deal in deals:      # we pass it directly to the HTML so that after refresh the discount is shown without using AJAX again
         deal.discounted_price = int(deal.product.price * (100 - deal.discount_percent) / 100)
@@ -966,7 +979,7 @@ def scan_qr(request, store_id=None):
                       'is_demo': is_demo,
                       'has_revealed': has_revealed,
                       'revealed_deal_id': revealed_deal_id,
-                      'auto_revealed_id': auto_revealed_id
+                      'auto_revealed_id': auto_revealed_id,
                   })
 
 
@@ -1000,18 +1013,39 @@ def reveal_discount(request, deal_id):
         return JsonResponse({'error': 'Sorry, this deal is expired.'},
                             status=410)
 
-    #  Check if any deal for this customer has already been revealed
-    if DailyDeal.objects.filter(
+    # Check if there's an AUTO-REVEALED deal (replacement) for this customer
+    auto_revealed_deal = DailyDeal.objects.filter(
         customer_id=customer_id,
         is_claimed=False,
-        has_revealed=True
-    ).exists():
-        return JsonResponse({'error': 'You have already revealed a deal. You can only choose that one.'},
-                            status=403)
+        auto_revealed=True
+    ).first()
+
+    # If the only revealed deal is auto-revealed, allow revealing another
+    if auto_revealed_deal:
+        # Clear the auto_revealed flag from the replacement
+        auto_revealed_deal.auto_revealed = False
+        auto_revealed_deal.save()
+        # DO NOT block – allow this new reveal
+    else:
+        # Normal flow: check if any deal is already revealed
+        if DailyDeal.objects.filter(
+                customer_id=customer_id,
+                is_claimed=False,
+                has_revealed=True
+        ).exists():
+            return JsonResponse({
+                'error': 'You have already revealed a deal. You can only choose that one.'
+            }, status=403)
 
     # Mark current deal as revealed
     deal.has_revealed = True
     deal.save()
+
+    # Turn off auto_revealed for any other deal of this customer
+    DailyDeal.objects.filter(
+        customer_id=customer_id,
+        auto_revealed=True
+    ).update(auto_revealed=False)
 
     # return the discount
     discounted_price = deal.product.price * (100 - deal.discount_percent) / 100
