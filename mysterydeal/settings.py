@@ -16,11 +16,11 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-3&8!ct^u3bvrdyj2kub0)fg$n=
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
 # DEBUG forced for local development
-DEBUG = True
+#DEBUG = True
 
 
 # ALLOWED_HOSTS from environment variable
-#ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',') + ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',') + ['localhost', '127.0.0.1']
 
 # Application definition
 INSTALLED_APPS = [
