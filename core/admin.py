@@ -24,6 +24,8 @@ class StoreAdmin(admin.ModelAdmin):
     )
 
     def generate_receipt_button(self, obj):
+        if not obj or not obj.id:
+            return "⚠️ Save the store first to generate a receipt."
         url = reverse('admin:generate_receipt', args=[obj.id])
         return format_html(
             '<a class="button" href="{}" style="background: #28a745; color: white; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-weight: bold;">🧾 Generate Receipt</a>',
