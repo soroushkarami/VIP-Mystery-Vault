@@ -541,8 +541,8 @@ def toggle_out_of_stock(request, product_id):
                 deal.save()
 
                 customer.notification_message = (
-                    f"🔄 متأسفیم، {product.name} تمام شد! "
-                    f"به جای آن {replacement.name} با تخفیف {new_discount}% (به جای {original_discount}%) تقدیم شما! 🎉"
+                    f"!متاسفیم، مورد انتخابی شما تمام شد"
+                    f"!به جای آن، پیشنهاد دیگری برای شما داریم"
                 )
                 customer.save()
                 messages.info(request,
@@ -924,21 +924,22 @@ def scan_qr(request, store_id=None):
     # SPECIAL OFFER
     # Check if customer hasn't received the Special Offer yet (demo OR cooldown ended)
     if not is_demo:
-        if (not customer.special_offer_used) and (customer.cooldown_until and customer.cooldown_until < timezone.now()):
+        if (not customer.special_offer_used) and (
+                customer.cooldown_until and customer.cooldown_until < timezone.now()) and (customer.visit_count > 1):
             # Clear the cooldown flag
             customer.cooldown_until = None
             customer.save()
 
-        # Generate Special Offer: 1 item at 30% off
-        special_deal = get_special_offer(customer, store)
-        if special_deal:
-            customer.special_offer_used = True
-            customer.save()
-            return render(request, 'core/special_offer.html', {
-                'customer': customer,
-                'store': store,
-                'deal': special_deal
-            })
+            # Generate Special Offer: 1 item at 30% off
+            special_deal = get_special_offer(customer, store)
+            if special_deal:
+                customer.special_offer_used = True
+                customer.save()
+                return render(request, 'core/special_offer.html', {
+                    'customer': customer,
+                    'store': store,
+                    'deal': special_deal
+                })
 
     # Check if customer already has ACTIVE pending deals before generating new deals
     existing_deals = DailyDeal.objects.filter(

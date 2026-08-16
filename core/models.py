@@ -89,27 +89,27 @@ class Product(models.Model):
 
     @property
     def name(self):
-        return self.main.name
+        return self.main.name if self.main else "No main"
 
     @property
     def category(self):
-        return self.main.category
+        return self.main.category if self.main else "No category"
 
     @property
     def image(self):
-        return self.main.image
+        return self.main.image if self.main else None
 
     @property
     def color(self):
-        return self.main.color
+        return self.main.color if self.main else "No color"
 
     @property
     def product_code(self):
-        return self.main.product_code
+        return self.main.product_code if self.main else "no-code"
 
     @property
     def has_image(self):
-        return bool(self.main.image)
+        return bool(self.main and self.main.image)
 
 
 class Customer(models.Model):
