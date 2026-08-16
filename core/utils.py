@@ -18,7 +18,7 @@ def get_top_deals(customer, store, top_k=3):
         size=customer.size,
         stock__gt=0,
         is_out_of_stock=False
-    )
+    ).select_related('main')
 
     # if no products matches customer's size, fall back to any size
     if not products.exists():

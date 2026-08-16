@@ -93,8 +93,9 @@ class StoreAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'sku', 'price', 'size', 'stock', 'is_out_of_stock', 'store')
-    list_filter = ('store', 'size', 'category')
+    list_display = ('sku', 'size', 'price', 'stock', 'is_out_of_stock', 'store', 'main')
+    list_filter = ('store', 'size', 'main__category')
+    search_fields = ('sku', 'main__name', 'main__product_code')
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):

@@ -99,7 +99,7 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
             # COLOR col
             color = str(row.get('Color', '')).strip()
 
-            # SKU col
+            # Get or create ProductCode col
             sku_found = False
             sku_from_excel = str(row.get('sku') or row.get('SKU') or row.get('Sku') or '').strip()
             if sku_from_excel:
@@ -122,24 +122,42 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
                     product_code = product_code[:30]
                     # Add a warning so you know it was auto-generated
                     errors.append(f"ProductCode auto-generated for '{name}': {product_code}")
+
+            # ── Get or create ProductMaster ──
+            main, main_created = ProductMain.objects.update_or_create(   # 'created' is boolean
+                store =store,
+                product_code=product_code,
+                defaults={
+                    'name':name,
+                    'category':category,
+                    'color': color,
+                }
+            )
+            # If main already exists, update name/category if changed
+            if not main_created:
+                if main.name != name:
+                    main.name = name
+                if main.category != category:
+                    main.category = category
+                if main.color != color:
+                    main.color = color
+                main.save()
+
                 # AUTO-GENERATE SKU col
                 sku = generate_sku(store.id, product_code, size, color)
                 if sku_from_excel and not sku_found:
                     errors.append(f"SKU '{sku_from_excel}' from Excel not found in DB. Generated new SKU: '{sku}'")
 
-            # Update or create the product
-            products, created = Product.objects.update_or_create(   # 'created' is boolean
-                store =store,
+            # ── Create or update Product (size variant) ──
+            product, created = Product.objects.update_or_create(
+                store=store,
                 sku=sku,
                 defaults={
-                    'name':name,
-                    'price':price,
-                    'size':size,
-                    'category':category,
-                    'stock':stock,
-                    'product_code': product_code,
-                    'color': color,
-                    'is_out_of_stock':False,
+                    'main': main,
+                    'size': size,
+                    'price': price,
+                    'stock': stock,
+                    'is_out_of_stock': False,
                 }
             )
             products_created += 1 if created else 0
@@ -156,19 +174,17 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
                     for name in zf.namelist():
                         # Get the file extension (e.g., .jpg, .png)
                         base, ext = os.path.splitext(name)
-                        sku_from_file = base.strip()
-                        if not sku_from_file:
+                        product_code = base.strip()
+                        if not product_code:
                             continue
 
                         # Check if it's an image file
                         if ext.lower() not in ['.jpg', '.jpeg', '.png', '.gif', 'webp']:
                             continue
 
-                        # Find the product with this SKU
+                        # Find the ProductMain with this product_code
                         try:
-                            # search for the product with that SKU in the store
-                            product = Product.objects.get(store=store,
-                                                          sku=sku_from_file)
+                            main = ProductMain.objects.get(store=store, product_code=product_code)
 
                             # Read the file content and save it to the product's image field
                             file_content = zf.read(name)     # reads the raw bytes of the image
@@ -178,11 +194,11 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
                             resized_img = resize_image(file_bytes, max_size=800, quality=80)
 
                             # Save the resized image to the product
-                            product.image.save(f"{sku_from_file}{ext}",
+                            main.image.save(f"{product_code}{ext}",
                                                ContentFile(resized_img.read()),
                                                save=True)
-                        except Product.DoesNotExist:
-                            errors.append(f"SKU '{sku_from_file}' not found for image '{name}'")
+                        except ProductMain.DoesNotExist:
+                            errors.append(f"SKU '{product_code}' not found for image '{name}'")
                         except Exception as e:
                             errors.append(f"Error processing image '{name}': {str(e)}")
 
@@ -532,7 +548,7 @@ def product_list(request):
     except Store.DoesNotExist:
         return redirect('dashboard_home')
 
-    products = Product.objects.filter(store=store).order_by('name')
+    products = Product.objects.filter(store=store).order_by('main__name')
 
     return render(request,
                   'core/product_list.html',
@@ -611,12 +627,12 @@ def view_skus(request):
                        'No store linked to your account.')
         return redirect('dashboard_home')
 
-    products = Product.objects.filter(store=store).order_by('product_code', 'size')
+    products = Product.objects.filter(store=store).select_related('main').order_by('main__product_code', 'size')
 
     # group by product_code
     grouped = {}
     for product in products:
-        key = product.product_code or 'no-code'
+        key = product.main.product_code or 'no-code'
         if key not in grouped:
             grouped[key] = []
         grouped[key].append(product)

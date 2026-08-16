@@ -47,37 +47,67 @@ class Store(models.Model):
         return self.name
 
 
-class Product(models.Model):
-    store = models.ForeignKey(Store,
-                              on_delete=models.CASCADE,
-                              related_name='products')
-    # Stock Keeping Unit (SKU) --> the ID for each product
-    sku = models.CharField(max_length=50, unique=True)
+class ProductMain(models.Model):
+    """Main info for a product family (shared across all sizes)"""
+    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='product_main')
     name = models.CharField(max_length=300)
-    price = models.DecimalField(max_digits=15,
-                                decimal_places=0)   # Tomans --> no decimals
-    size = models.CharField(max_length=20,
-                            choices=[('S','S'), ('M','M'), ('L','L'), ('XL','XL'),
-                                    ('XXL','XXL'), ('XXXL','XXXL')])
-                            # ('XL','XL'):
-                            # First 'XL' = The value saved in the database (referred to as db_value).
-                            # Second 'XL' = The value displayed in dropdown menus (referred to as display_value).
-    category = models.CharField(max_length=60)      # eg shirt, pants etc
-    stock = models.PositiveIntegerField(default=0)
-    is_out_of_stock = models.BooleanField(default=False)
-    image = models.ImageField(upload_to='products/',
-                              null=True, blank=True)
-    # for automatic sku generation
-    product_code = models.CharField(max_length=50, null=True, blank=True,
-                                    db_index=True)
+    category = models.CharField(max_length=60)
+    image = models.ImageField(upload_to='products/', null=True, blank=True)
+    product_code = models.CharField(max_length=50, null=True, blank=True, db_index=True)
     color = models.CharField(max_length=100, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f'{self.name} [{self.sku}]'
+        return f'{self.name} [{self.product_code}]'
+
+    class Meta:
+        unique_together = ['store', 'product_code']  # Ensure product_code is unique per store
+
+
+class Product(models.Model):
+    store = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='products')
+    # Link to ProductMain
+    main = models.ForeignKey(ProductMain, on_delete=models.CASCADE, related_name='variants',
+                             null=True, blank=True)
+
+    # Size-specific fields
+    sku = models.CharField(max_length=50, unique=True)
+    size = models.CharField(max_length=20,
+                            choices=[('S', 'S'), ('M', 'M'), ('L', 'L'), ('XL', 'XL'),
+                                     ('XXL', 'XXL'), ('XXXL', 'XXXL')])
+    # ('XL','XL'):
+    # First 'XL' = The value saved in the database (referred to as db_value).
+    # Second 'XL' = The value displayed in dropdown menus (referred to as display_value).
+    price = models.DecimalField(max_digits=15, decimal_places=0)    # Tomans --> no decimals
+    stock = models.PositiveIntegerField(default=0)
+    is_out_of_stock = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f'{self.main.name} [{self.sku}]'
+
+    @property
+    def name(self):
+        return self.main.name
+
+    @property
+    def category(self):
+        return self.main.category
+
+    @property
+    def image(self):
+        return self.main.image
+
+    @property
+    def color(self):
+        return self.main.color
+
+    @property
+    def product_code(self):
+        return self.main.product_code
 
     @property
     def has_image(self):
-        return bool(self.image)
+        return bool(self.main.image)
 
 
 class Customer(models.Model):
