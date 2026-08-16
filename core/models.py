@@ -83,7 +83,9 @@ class Product(models.Model):
     is_out_of_stock = models.BooleanField(default=False)
 
     def __str__(self):
-        return f'{self.main.name} [{self.sku}]'
+        if self.main:
+            return f'{self.main.name} [{self.sku}]'
+        return f'Product {self.sku} (no main)'
 
     @property
     def name(self):
