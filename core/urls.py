@@ -6,7 +6,7 @@ from .views import (
     toggle_out_of_stock, product_list,
     scan_qr, reveal_discount,
     login_redirect, generate_qr,
-    update_product, view_skus,
+    update_product, photo_naming_guide,
     account_settings, change_username,
     upload_logo, demo_dashboard,
     sales_detail, landing_page,
@@ -36,7 +36,7 @@ urlpatterns = [
     path('dashboard/products/', product_list, name='product_list'),
     path('dashboard/qr/', generate_qr, name='generate_qr'),
     path('dashboard/update_product/', update_product, name='update_product'),
-    path('dashboard/skus/', view_skus, name='view_skus'),
+    path('dashboard/photo-guide/', photo_naming_guide, name='view_skus'),
     path('dashboard/sales/', sales_detail, name='sales_detail'),
 
     # Customer QR URLs

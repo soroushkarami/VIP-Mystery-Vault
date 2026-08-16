@@ -11,7 +11,7 @@ class UploadInventoryForm(forms.Form):
         label='Select Store'
     )
     # Create a file upload button on the page
-    excel_file = forms.FileField(label="Excel File (.xlsx)")
+    excel_file = forms.FileField(label="Excel File (.xlsx)", required=False)
     zip_images = forms.FileField(required=False,        # optional
                                  label="ZIP File with Photos")
 

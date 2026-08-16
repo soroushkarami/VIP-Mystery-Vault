@@ -10,7 +10,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from .models import Store, Product, Customer, DailyDeal
+from .models import Store, Product, Customer, DailyDeal, ProductMain
 from .forms import (UploadInventoryForm, CustomerRegistrationForm,
                     UsernameChangeForm, StoreLogoForm)
 from .normalizer import (normalize_columns, persian_to_english_numbers,
@@ -23,11 +23,13 @@ from .utils import (get_top_deals,
                     subscription_required,
                     resize_image)
 
+from io import BytesIO
 import os
 import pandas as pd
 import zipfile
 import qrcode
 import json
+
 
 
 class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in users(registered sellers) can access
@@ -47,127 +49,130 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
         """
         runs automatically when Django determines the form is 100% valid (file types are correct, no viruses, etc.)
         """
-        store = form.cleaned_data['store']      # cleaned_data: tool in FormView that checks if the file is a valid file
+        store = form.cleaned_data['store']  # cleaned_data: tool in FormView that checks if the file is a valid file
         excel_file = form.cleaned_data['excel_file']
         zip_file = form.cleaned_data['zip_images']
 
-        #TODO 1. PROCESS EXCEL
-        try:
-            df = pd.read_excel(excel_file)
-        except Exception as e:
-            messages.error(self.request,
-                           f"Failed to read Excel: {str(e)}")
-            return super().form_invalid(form)   # re-renders the page with the error message
-
-        # Normalize Persian column names to English
-        df = normalize_columns(df)
-
+        # ── Initialize variables outside the if block ──
         products_created = 0
         errors = []
         sku_list = []
 
-        # check columns: Name, Price, Size, Category, Stock, Color, ProductCode(-> Sku)
-        for idx, row in df.iterrows():
-            # NAME col
-            name = row.get('Name', '-')
-
-            # CATEGORY col
-            category = row.get('Category', 'General')
-
-            # PRICE col
-            # Convert Persian numbers to English
-            price_str = persian_to_english_numbers(row.get('Price', '0'))
+        # TODO 1. PROCESS EXCEL
+        if excel_file:
             try:
-                price = int(price_str) if price_str else 0
-            except ValueError:
-                errors.append(f"Invalid price for row {idx+2}: '{price_str}'")
-                price = 0
+                df = pd.read_excel(excel_file)
+            except Exception as e:
+                messages.error(self.request,
+                               f"Failed to read Excel: {str(e)}")
+                return super().form_invalid(form)  # re-renders the page with the error message
 
-            # STOCK col
-            # Convert Persian numbers to English
-            stock_str = persian_to_english_numbers(row.get('Stock', '0'))
-            try:
-                stock = int(stock_str) if stock_str else 0
-            except ValueError:
-                errors.append(f"Invalid stock for row '{idx+2}': '{stock_str}'")
-                stock = 0
+            # Normalize Persian column names to English
+            df = normalize_columns(df)
 
-            # SIZE col
-            # Normalize Persian sizes
-            size = normalize_size(row.get('Size', 'M'))
+            # check columns: Name, Price, Size, Category, Stock, Color, ProductCode(-> Sku)
+            for idx, row in df.iterrows():
+                # NAME col
+                name = row.get('Name', '-')
 
-            # COLOR col
-            color = str(row.get('Color', '')).strip()
+                # CATEGORY col
+                category = row.get('Category', 'General')
 
-            # Get or create ProductCode col
-            sku_found = False
-            sku_from_excel = str(row.get('sku') or row.get('SKU') or row.get('Sku') or '').strip()
-            if sku_from_excel:
-                existing_product = Product.objects.filter(
+                # PRICE col
+                # Convert Persian numbers to English
+                price_str = persian_to_english_numbers(row.get('Price', '0'))
+                try:
+                    price = int(price_str) if price_str else 0
+                except ValueError:
+                    errors.append(f"Invalid price for row {idx + 2}: '{price_str}'")
+                    price = 0
+
+                # STOCK col
+                # Convert Persian numbers to English
+                stock_str = persian_to_english_numbers(row.get('Stock', '0'))
+                try:
+                    stock = int(stock_str) if stock_str else 0
+                except ValueError:
+                    errors.append(f"Invalid stock for row '{idx + 2}': '{stock_str}'")
+                    stock = 0
+
+                # SIZE col
+                # Normalize Persian sizes
+                size = normalize_size(row.get('Size', 'M'))
+
+                # COLOR col
+                color = str(row.get('Color', '')).strip()
+
+                # Get or create ProductCode col
+                sku_found = False
+                sku_from_excel = str(row.get('sku') or row.get('SKU') or row.get('Sku') or '').strip()
+                if sku_from_excel:
+                    existing_product = Product.objects.filter(
+                        store=store,
+                        sku=sku_from_excel
+                    ).first()
+                    if existing_product:  # SKU exists in DB – use that instead of using Pruduct_code
+                        sku_found = True
+                        sku = sku_from_excel
+                        product_code = existing_product.product_code or sku_from_excel
+                        errors.append(f"Found existing product with SKU '{sku_from_excel}'. Will update.")
+                if not sku_found:
+                    # Get product_code (for sku generation)
+                    product_code = str(
+                        row.get('ProductCode') or row.get('product_code') or row.get('Product_code') or '').strip()
+                    if not product_code:
+                        # Auto-generate it from name
+                        product_code = name.replace(' ', '-').upper()
+                        # Limit length to avoid issues
+                        product_code = product_code[:30]
+                        # Add a warning so you know it was auto-generated
+                        errors.append(f"ProductCode auto-generated for '{name}': {product_code}")
+
+                # ── Get or create ProductMaster ──
+                main, main_created = ProductMain.objects.update_or_create(  # 'created' is boolean
                     store=store,
-                    sku=sku_from_excel
-                ).first()
-                if existing_product:    # SKU exists in DB – use that instead of using Pruduct_code
-                    sku_found = True
-                    sku = sku_from_excel
-                    product_code = existing_product.product_code or sku_from_excel
-                    errors.append(f"Found existing product with SKU '{sku_from_excel}'. Will update.")
-            if not sku_found:
-                # Get product_code (for sku generation)
-                product_code = str(row.get('ProductCode') or row.get('product_code') or row.get('Product_code') or '').strip()
-                if not product_code:
-                    # Auto-generate it from name
-                    product_code = name.replace(' ', '-').upper()
-                    # Limit length to avoid issues
-                    product_code = product_code[:30]
-                    # Add a warning so you know it was auto-generated
-                    errors.append(f"ProductCode auto-generated for '{name}': {product_code}")
-
-            # ── Get or create ProductMaster ──
-            main, main_created = ProductMain.objects.update_or_create(   # 'created' is boolean
-                store =store,
-                product_code=product_code,
-                defaults={
-                    'name':name,
-                    'category':category,
-                    'color': color,
-                }
-            )
-            # If main already exists, update name/category if changed
-            if not main_created:
-                if main.name != name:
-                    main.name = name
-                if main.category != category:
-                    main.category = category
-                if main.color != color:
-                    main.color = color
-                main.save()
+                    product_code=product_code,
+                    defaults={
+                        'name': name,
+                        'category': category,
+                        'color': color,
+                    }
+                )
+                # If main already exists, update name/category if changed
+                if not main_created:
+                    if main.name != name:
+                        main.name = name
+                    if main.category != category:
+                        main.category = category
+                    if main.color != color:
+                        main.color = color
+                    main.save()
 
                 # AUTO-GENERATE SKU col
                 sku = generate_sku(store.id, product_code, size, color)
                 if sku_from_excel and not sku_found:
                     errors.append(f"SKU '{sku_from_excel}' from Excel not found in DB. Generated new SKU: '{sku}'")
 
-            # ── Create or update Product (size variant) ──
-            product, created = Product.objects.update_or_create(
-                store=store,
-                sku=sku,
-                defaults={
-                    'main': main,
-                    'size': size,
-                    'price': price,
-                    'stock': stock,
-                    'is_out_of_stock': False,
-                }
-            )
-            products_created += 1 if created else 0
-            sku_list.append(sku)
+                # ── Create or update Product (size variant) ──
+                product, created = Product.objects.update_or_create(
+                    store=store,
+                    sku=sku,
+                    defaults={
+                        'main': main,
+                        'size': size,
+                        'price': price,
+                        'stock': stock,
+                        'is_out_of_stock': False,
+                    }
+                )
+                products_created += 1 if created else 0
+                sku_list.append(sku)
 
-        # store the sku list in session for display
-        self.request.session['uploaded_skus'] = sku_list
-        self.request.session['store_id'] = store.id
+            # store the sku list in session for display
+            self.request.session['uploaded_skus'] = sku_list
+            self.request.session['store_id'] = store.id
 
-        #TODO 2. PROCESS ZIP (if provided)
+        # TODO 2. PROCESS ZIP (if provided)
         if zip_file:
             try:
                 with zipfile.ZipFile(zip_file, 'r') as zf:
@@ -187,7 +192,7 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
                             main = ProductMain.objects.get(store=store, product_code=product_code)
 
                             # Read the file content and save it to the product's image field
-                            file_content = zf.read(name)     # reads the raw bytes of the image
+                            file_content = zf.read(name)  # reads the raw bytes of the image
                             file_bytes = BytesIO(file_content)
 
                             # Resize and compress the image if needed
@@ -195,8 +200,8 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
 
                             # Save the resized image to the product
                             main.image.save(f"{product_code}{ext}",
-                                               ContentFile(resized_img.read()),
-                                               save=True)
+                                            ContentFile(resized_img.read()),
+                                            save=True)
                         except ProductMain.DoesNotExist:
                             errors.append(f"SKU '{product_code}' not found for image '{name}'")
                         except Exception as e:
@@ -209,15 +214,30 @@ class UploadInventoryView(LoginRequiredMixin, FormView):    # Only logged-in use
         if errors:
             messages.warning(self.request,
                              f"Processed {products_created} products, but had issues: {', '.join(errors[:5])}")
-        else:
+            # Return to parent even with errors (partial work may have been done)
+            return super().form_valid(form)
+
+        # No errors – build appropriate success message
+        if excel_file and sku_list:
             sku_message = "✅ Success! Products added/updated.\n\n📋 SKUs for your first 10 photos:\n"
             for sku in sku_list[:10]:  # Show first 10
                 sku_message += f"  • {sku}.jpg\n"
             if len(sku_list) > 10:
                 sku_message += f"  ... and {len(sku_list) - 10} more.\n"
-            sku_message += "\n📸 Rename your photos to match these SKUs before uploading the ZIP."
+            sku_message += "\n📸 Rename your photos to match the Photo Names shown in the guide before uploading the ZIP."
 
             messages.success(self.request, sku_message)
+
+        elif zip_file and not excel_file:
+            # Only ZIP uploaded – photos only
+            messages.success(self.request, "✅ Photos uploaded successfully! All matching products have been updated.")
+
+        elif excel_file and not zip_file:
+            # Only Excel uploaded – products only
+            messages.success(self.request, f"✅ Products added/updated. {products_created} products processed.")
+
+        else:
+            messages.warning(self.request, "No files uploaded.")
 
         # calls the parent (FormView) which does the redirect to success_url (admin:index)
         return super().form_valid(form)
@@ -618,7 +638,7 @@ def update_product(request):
 
 @subscription_required
 @login_required
-def view_skus(request):
+def photo_naming_guide(request):
     """Show a list of all SKUs for the seller's store (for photo naming)"""
     try:
         store = request.user.store
@@ -632,13 +652,17 @@ def view_skus(request):
     # group by product_code
     grouped = {}
     for product in products:
-        key = product.main.product_code or 'no-code'
+        if product.main:
+            key = product.main.product_code or 'no-code'
+        else:
+            key = 'No main!'
+
         if key not in grouped:
             grouped[key] = []
         grouped[key].append(product)
 
     return render(request,
-                  'core/view_skus.html',
+                  'core/photo_naming_guide.html',
                   {
                       'store': store,
                       'grouped': grouped,
